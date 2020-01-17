@@ -10,11 +10,7 @@ describe('Bezier City', () => {
   });
 
   it('should display the game window', async () => {
-    var x = await page.$eval('canvas', el => el); // Replace this second arg with something meaningful
-    if (x == null) {
-      console.log("no image here")
-      fail();
-    }
+    await page.$eval('canvas', el => el); // Replace this second arg with something meaningful
   });
 
   // it('the background should be the sky', async () => {

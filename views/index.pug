@@ -3,10 +3,10 @@ html(lang="en")
   head
     title= 'Bézier City'
     link(rel='stylesheet' href='https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css')
-  script(type='text/javascript', src='/js/phaser/phaser.js').
-  body
+    script(type='text/javascript', src='/js/phaser/phaser.js').
+  body(style="background-color:#000000")
     canvas(id="game")
-    p(id="ver") #{version}
+    p(id="ver", style="color:#00ff00") #{version}
     script(type='text/javascript').
 
       var config = {

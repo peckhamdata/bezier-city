@@ -2,9 +2,9 @@ const express = require('express')
 const app = express()
 const port = process.env.PORT || 3000
 
-revision = require('child_process')
-  .execSync('git rev-parse HEAD')
-  .toString().trim()
+var fs = require('fs');
+
+revision = fs.readFileSync('revision.txt', 'utf8');
 
 app.get('/', function (req, res) {
   res.render('index', { version: revision })

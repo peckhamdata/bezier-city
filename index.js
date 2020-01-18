@@ -2,8 +2,12 @@ const express = require('express')
 const app = express()
 const port = process.env.PORT || 3000
 
+revision = require('child_process')
+  .execSync('git rev-parse HEAD')
+  .toString().trim()
+
 app.get('/', function (req, res) {
-  res.render('index', { version: 'foo' })
+  res.render('index', { version: revision })
 })
 
 app.use('/js/phaser', express.static('node_modules/phaser/dist'))

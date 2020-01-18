@@ -18,6 +18,6 @@ Run the tests with `npm run test` or simply `jest`
 
 Run locally with:
 
-`npm run serve`
+`npm run start`
 
 Deploy to Heroku with:

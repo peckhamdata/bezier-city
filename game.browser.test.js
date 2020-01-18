@@ -9,13 +9,14 @@ describe('Bezier City', () => {
     await expect(page.title()).resolves.toMatch(title);
   });
 
-  it('should display the game window', async () => {
-    await page.$eval('canvas', el => el); // Replace this second arg with something meaningful
+  it('should display the game window', async () => {  
+    await expect(page).toMatchElement('canvas');
   });
 
-  // it('the background should be the sky', async () => {
-  //   fail();
-  // });
+  it('should display the sky', async () => {  
+    const sky = await page.evaluate(() => game.scene.scenes[0].children.list[0].texture.key.toString());
+    expect(sky).toEqual('sky'); 
+  });
 
   // it('it should show the version number', async () => {
   //   fail();

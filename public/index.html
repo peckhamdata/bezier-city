@@ -22,10 +22,15 @@
 
     function preload ()
     {
+        this.load.image('sky', 'assets/sky.png');
     }
 
     function create ()
     {
+        const gameWidth = this.sys.canvas.width;
+        const gameHeight = this.sys.canvas.hight;
+        const sky = this.add.image(0, 0, 'sky').setOrigin(0, 0)  // reset the drawing position of the image to the top-left - default is centre
+        sky.displayWidth = gameWidth;
     }
 
     function update ()

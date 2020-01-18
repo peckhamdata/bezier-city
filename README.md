@@ -10,8 +10,14 @@
 
 * Clone this repository
 
+## Testing
+
+Run the tests with `npm run test` or simply `jest`
+
 ## Deployment
 
+Run locally with:
+
+`npm run serve`
+
 Deploy to Heroku with:
-
-

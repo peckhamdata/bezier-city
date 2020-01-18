@@ -1,6 +1,6 @@
-var title = "Bezier City"
+var title = "Bézier City"
 
-describe('Bezier City', () => {
+describe('Bézier City', () => {
   beforeAll(async () => {
     await page.goto(PATH, { waitUntil: 'load' })
   });

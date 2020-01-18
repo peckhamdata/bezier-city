@@ -1,0 +1,40 @@
+doctype html
+html(lang="en")
+  head
+    title= 'Bézier City'
+  script(type='text/javascript', src='/js/phaser/phaser.js').
+  body
+    canvas(id="game")
+    p #{version}
+    script(type='text/javascript').
+
+      var config = {
+          type: Phaser.CANVAS,
+          width: 800,
+          height: 600,
+          canvas: document.getElementById("game"),
+          scene: {
+              preload: preload,
+              create: create,
+              update: update
+          }
+      };
+
+      var game = new Phaser.Game(config);
+
+      function preload ()
+      {
+          this.load.image('sky', 'assets/sky.png');
+      }
+
+      function create ()
+      {
+          const gameWidth = this.sys.canvas.width;
+          const gameHeight = this.sys.canvas.hight;
+          const sky = this.add.image(0, 0, 'sky').setOrigin(0, 0)  // reset the drawing position of the image to the top-left - default is centre
+          sky.displayWidth = gameWidth;
+      }
+
+      function update ()
+      {
+      }

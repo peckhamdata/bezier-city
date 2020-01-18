@@ -6,20 +6,8 @@ var fs = require('fs');
 
 revision = fs.readFileSync('revision.txt', 'utf8');
 
-// https://stackoverflow.com/questions/7450940/automatic-https-connection-redirect-with-node-js-express
-console.log(app.get('env'))
-
 if (app.get('env') !== 'development') {
-
-	app.use (function (req, res, next) {
-	        if (req.secure) {
-	                // request was via https, so do no special handling
-	                next();
-	        } else {
-	                // request was via http, so redirect to https
-	                res.redirect('https://www.beziercity.com' + req.url);
-	        }
-	});
+	app.use(enforce.HTTPS());
 }
 
 app.get('/', function (req, res) {

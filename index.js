@@ -8,7 +8,7 @@ var enforce = require('express-sslify');
 revision = fs.readFileSync('revision.txt', 'utf8');
 
 if (app.get('env') !== 'development') {
-	app.use(enforce.HTTPS());
+	app.use(enforce.HTTPS({ trustProtoHeader: true }));
 }
 
 app.get('/', function (req, res) {

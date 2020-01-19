@@ -3,6 +3,7 @@ const app = express()
 const port = process.env.PORT || 3000
 
 var fs = require('fs');
+var enforce = require('express-sslify');
 
 revision = fs.readFileSync('revision.txt', 'utf8');
 

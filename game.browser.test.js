@@ -20,9 +20,9 @@ describe('Bézier City', () => {
 
   it('it should show the version number', async () => {
 
-    revision = require('child_process')
-      .execSync('git rev-parse HEAD')
-      .toString().trim()
+    var fs = require('fs');
+
+    revision = fs.readFileSync('revision.txt', 'utf8');
     const ver = await page.$('#ver');
     await expect(ver).toMatch(revision);
   });

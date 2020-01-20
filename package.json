@@ -41,9 +41,10 @@
     "verbose": true,
     "projects": [
       {
+        "displayName": "Browser",
         "preset": "jest-puppeteer",
         "testMatch": [
-          "<rootDir>/**/*.browser.test.js"
+          "<rootDir>/test/browser/**/*.test.js"
         ],
         "globals": {
           "PATH": "http://localhost:3000"
@@ -52,7 +53,7 @@
       {
         "displayName": "Unit",
         "testMatch": [
-          "<rootDir>/**/*.unit.test.js"
+          "<rootDir>/test/unit/**/*.test.js"
         ],
         "verbose": true
       }

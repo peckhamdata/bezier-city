@@ -14,10 +14,16 @@
 
 Run the tests with `npm run test` or simply `jest`
 
+The browser based tests take a little longer to run. For just the unit tests use:
+
+```
+jest --roots test/unit
+```
+
 ## Deployment
 
 Run locally with:
 
 `npm run start`
 
-Deploy to Heroku with:
+Deploy to Heroku by commiting to `master`

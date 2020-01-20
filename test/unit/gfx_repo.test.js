@@ -7,8 +7,10 @@ describe('Bézier City', () => {
                             1: 'raster-sky'}}
     let gr = new GfxRepo(textures)
     // when
-    var texture = gr.get_texture('sky', 0);
+    var texture_0 = gr.get_texture('sky', 0);
+    var texture_1 = gr.get_texture('sky', 1);
     // then
-    expect(texture).toMatch('petscii-sky')
+    expect(texture_0).toMatch('petscii-sky')
+    expect(texture_1).toMatch('raster-sky')
   });
 });

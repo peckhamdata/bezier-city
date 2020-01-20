@@ -3,6 +3,6 @@ module.exports = class GfxRepo {
     this.gfx_data = gfx_data;
   }
   get_texture(key, level) {
-    return 'petscii-sky';
+    return this.gfx_data[key][level];
   }
 }

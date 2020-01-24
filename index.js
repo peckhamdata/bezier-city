@@ -19,6 +19,7 @@ app.get('/', function (req, res) {
 
 app.use('/js/phaser', express.static('node_modules/phaser/dist'))
 app.use('/assets', express.static('public/assets'))
+app.use('/js', express.static('public/js'))
 app.set('view engine', 'pug')
 
 app.listen(port, () => console.log(`listening on port ${port}!`))

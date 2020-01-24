@@ -1,4 +1,4 @@
-const GfxRepo = require("../../gfx_repo.js")
+const GfxRepo = require("../../src/gfx_repo.js")
 
 describe('Bézier City', () => {
   it('can be stocked with new textures', () => {

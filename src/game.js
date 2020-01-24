@@ -11,6 +11,6 @@ module.exports = class Game {
     }
     this.engagement++;
     const texture = this.repo.get_texture('sky', this.engagement);
-    this.sky.setTexture(texture);
+    this.sky.setTexture(texture.name);
   }
 }

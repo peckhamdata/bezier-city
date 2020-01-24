@@ -9,51 +9,11 @@ html(lang="en")
     link(rel="manifest" href="assets/favicon/site.webmanifest")
 
     link(rel='stylesheet' href='https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css')
-    script(type='text/javascript', src='/js/phaser/phaser.js').
+    script(type='text/javascript', src='/js/phaser/phaser.js')
+    script(type='text/javascript', src='/js/game.bundle.js')
+    script(type='text/javascript', src='/js/gfx.bundle.js')
   body(style="background-color:#000000")
     canvas(id="game")
     p(id="ver", style="color:#00ff00") #{version}
-    script(type='text/javascript').
-
-      var config = {
-          type: Phaser.CANVAS,
-         scale: {
-              mode: Phaser.Scale.FIT,
-              parent: 'phaser-example',
-              autoCenter: Phaser.Scale.CENTER_BOTH,
-              width: 1280,
-              height: 720
-          },
-          canvas: document.getElementById("game"),
-          scene: {
-              preload: preload,
-              create: create,
-              update: update
-          }
-      };
-
-      var game = new Phaser.Game(config);
-
-      function preload ()
-      {
-          this.load.image('sky', 'assets/sky-pet.png');
-          this.load.image('sky-2', 'assets/sky.png');
-      }
-
-      function create ()
-      {
-          const gameWidth = this.sys.canvas.width;
-          const gameHeight = this.sys.canvas.hight;
-          const sky = this.add.image(0, 0, 'sky').setOrigin(0, 0)  // reset the drawing position of the image to the top-left - default is centre
-          sky.displayWidth = gameWidth;
-      }
-
-      function update ()
-      {
-      }
-
-      function resize ()
-      {
-
-      }
+    script(type='text/javascript', src='/js/app.bundle.js')
 

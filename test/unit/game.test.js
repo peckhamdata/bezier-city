@@ -1,10 +1,10 @@
-const GfxRepo = require("../../gfx_repo.js");
+const GfxRepo = require("../../src/gfx_repo.js");
 
 // To Mock Phaser objects like the Sky we can't
 // refer to Phaser itself as it will throw errors
 // when it can't see the browser objects it is expecting
 
-const Game = require("../../game.js")
+const Game = require("../../src/game.js")
 
 var repo;
 var game;
@@ -19,7 +19,8 @@ describe('Game', () => {
 	// When we start up 
 	repo = new GfxRepo(textures);
 	repo.get_texture = jest.fn();
-	repo.get_texture.mockReturnValue('petscii-sky');
+	repo.get_texture.mockReturnValue({'name': 'petscii-sky', 
+                                	  'src':  'assets/petscii-sky.png'});
 	sky.setTexture = jest.fn();
 	game = new Game(repo, sky);
   });

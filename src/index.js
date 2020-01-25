@@ -40,7 +40,7 @@ export default function bc() {
           const sky = this.add.image(0, 0, 'sky').setOrigin(0, 0)  // reset the drawing position of the image to the top-left - default is centre
           sky.displayWidth = gameWidth;
 
-          var textures = {'sky': {0: {'name': 'sky', 
+          var textures = {'sky': {0: {'name': 'petscii-sky', 
                                       'src':  'assets/petscii-sky.png'}, 
                                   1: {'name': 'raster-sky',
                                       'src':  'assets/sky.png'},
@@ -64,20 +64,6 @@ export default function bc() {
 
       function update ()
       {
-        if (cursors.left.isDown)
-        {
-          if (repeat != 'down') {
-            console.log('oh');
-            repeat = 'down';
-          }
-        }
-        else if (cursors.left.isUp)
-        {
-          if (repeat != 'up') {
-            bc.inc_engagement();
-            repeat = 'up';
-          }
-        }
 
       }
 

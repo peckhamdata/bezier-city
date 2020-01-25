@@ -14,8 +14,8 @@ describe('Bézier City', () => {
   });
 
   it('should display the sky', async () => {  
-    const sky = await page.evaluate(() => game.scene.scenes[0].children.list[0].texture.key.toString());
-    expect(sky).toEqual('sky'); 
+    const sky = await page.evaluate(() => bezier.game.scene.scenes[0].children.list[0].texture.key.toString());
+    expect(sky).toEqual('raster-sky'); 
   });
 
   it('it should show the version number', async () => {

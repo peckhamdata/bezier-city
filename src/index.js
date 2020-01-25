@@ -1,7 +1,7 @@
 import Game from './game.js';
 import GfxRepo from './gfx_repo.js';
 
-function component() {
+export default function bc() {
 
       var config = {
           type: Phaser.CANVAS,
@@ -79,6 +79,7 @@ function component() {
       {
 
       }
+      return {
+        game:game
+      }
 }
-
-document.body.appendChild(component());

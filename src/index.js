@@ -54,6 +54,12 @@ export default function bc() {
           bc.max_engagement = 2;
           cursors = this.input.keyboard.createCursorKeys();
 
+          this.input.on('pointerdown', function (pointer) {
+              bc.inc_engagement();
+              console.log(this.game.loop.frame, 'down B');
+
+          }, this);
+
       }
 
       function update ()

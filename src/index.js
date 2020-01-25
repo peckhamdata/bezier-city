@@ -22,13 +22,13 @@ export default function bc() {
 
       var game = new Phaser.Game(config);
       var repo;
-      var bc;
+      var bc = new Game();
       var cursors;
       var repeat;
 
       function preload ()
       {
-          this.load.image('sky', 'assets/sky-pet.png');
+          this.load.image('petscii-sky', 'assets/sky-pet.png');
           this.load.image('raster-sky', 'assets/sky.png');
           this.load.image('sky-2012', 'assets/sky-2012.png');
       }
@@ -37,7 +37,7 @@ export default function bc() {
       {
           const gameWidth = this.sys.canvas.width;
           const gameHeight = this.sys.canvas.hight;
-          const sky = this.add.image(0, 0, 'sky').setOrigin(0, 0)  // reset the drawing position of the image to the top-left - default is centre
+          const sky = this.add.image(0, 0, 'petscii-sky').setOrigin(0, 0)  // reset the drawing position of the image to the top-left - default is centre
           sky.displayWidth = gameWidth;
 
           var textures = {'sky': {0: {'name': 'petscii-sky', 
@@ -50,7 +50,8 @@ export default function bc() {
                          };
 
           repo = new GfxRepo(textures);
-          bc = new Game(repo, sky);
+          bc.repo = repo;
+          bc.sky = sky;
           bc.max_engagement = 2;
           cursors = this.input.keyboard.createCursorKeys();
 
@@ -72,6 +73,7 @@ export default function bc() {
 
       }
       return {
-        game:game
+        game:game,
+        bc:bc
       }
 }

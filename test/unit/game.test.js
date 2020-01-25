@@ -9,12 +9,19 @@ const Game = require("../../src/game.js")
 var repo;
 var game;
 var sky = {};
+// Given some textures
+var textures = {};
 
 describe('Game', () => {
  
+
+  it('Can be started empty and then added to', () => {
+    var empty_game = new(Game);
+    game.repo = new GfxRepo(textures);
+    game.sky = sky;
+  });
+
   beforeEach(() => {
- 	// Given some textures
-  	var textures = {};
 
 	// When we start up 
 	repo = new GfxRepo(textures);

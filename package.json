@@ -33,11 +33,14 @@
   },
   "dependencies": {
     "express": "^4.17.1",
+    "express-graphql": "^0.9.0",
     "express-sslify": "^1.2.0",
+    "graphql": "^14.6.0",
     "newrelic": "^6.2.0",
     "phaser": "^3.22.0",
     "pug": "^2.0.4",
-    "puppeteer": "^2.0.0"
+    "puppeteer": "^2.0.0",
+    "winston": "^3.2.1"
   },
   "jest": {
     "displayName": "Browser",

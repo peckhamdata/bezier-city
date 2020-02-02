@@ -1,4 +1,8 @@
 require ('newrelic');
+var graphqlHTTP = require('express-graphql');
+var { buildSchema } = require('graphql');
+
+const GfxRepo = require("./src/gfx_repo.js")
 
 const express = require('express')
 const app = express()
@@ -10,8 +14,41 @@ var enforce = require('express-sslify');
 revision = fs.readFileSync('revision.txt', 'utf8');
 
 if (app.get('env') !== 'development') {
-	app.use(enforce.HTTPS({ trustProtoHeader: true }));
+  app.use(enforce.HTTPS({ trustProtoHeader: true }));
 }
+
+// Construct a schema, using GraphQL schema language
+var schema = buildSchema(`
+  type Texture {
+    name: String
+    src: String
+  }
+
+  type Query {
+    texture: [Texture]
+  }
+`);
+
+var textures = {'sky': {0: {'name': 'petscii-sky', 
+                            'src':  'assets/petscii-sky.png'}, 
+                        1: {'name': 'raster-sky',
+                            'src':  'assets/raster-sky.png'}
+                       }
+               };
+var gfx = new GfxRepo(textures);
+
+// The root provides a resolver function for each API endpoint
+var root = {
+  texture: () => {
+    return gfx.get_texture();
+  }
+};
+
+app.use('/graphql', graphqlHTTP({
+  schema: schema,
+  rootValue: root,
+  graphiql: true,
+}));
 
 app.get('/', function (req, res) {
   res.render('index', { version: revision })

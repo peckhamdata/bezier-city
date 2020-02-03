@@ -16,7 +16,7 @@ describe('Game', () => {
  
 
   it('Can be started empty and then added to', () => {
-    var empty_game = new(Game);
+    var empty_game = new Game();
     game.repo = new GfxRepo(textures);
     game.sky = sky;
   });

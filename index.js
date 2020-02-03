@@ -29,10 +29,12 @@ var schema = buildSchema(`
   }
 `);
 
-var textures = {'sky': {0: {'name': 'petscii-sky', 
-                            'src':  'assets/petscii-sky.png'}, 
+var textures = {'sky': {0: {'name': 'pet-sky', 
+                            'src':  'assets/sky-pet.png'}, 
                         1: {'name': 'raster-sky',
-                            'src':  'assets/raster-sky.png'}
+                            'src':  'assets/sky.png'},
+                        2: {'name': 'sky',
+                            'src':  'assets/sky-2012.png'}
                        }
                };
 var gfx = new GfxRepo(textures);

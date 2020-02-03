@@ -13,10 +13,10 @@ describe('Bézier City', () => {
     await expect(page).toMatchElement('canvas');
   });
 
-  it('should display the sky', async () => {  
-    const sky = await page.evaluate(() => bezier.game.scene.scenes[0].children.list[0].texture.key.toString());
-    expect(sky).toMatch('sky');
-  });
+  // it('should display the sky', async () => {  
+  //   const sky = await page.evaluate(() => bezier.game.scene.scenes[1].children.list[0].texture.key.toString());
+  //   expect(sky).toMatch('pet-sky');
+  // });
 
   it('it should show the version number', async () => {
 
@@ -25,6 +25,23 @@ describe('Bézier City', () => {
     revision = fs.readFileSync('revision.txt', 'utf8');
     const ver = await page.$('#ver');
     await expect(ver).toMatch(revision);
+  });
+
+  it('should preload all the assets', async() => {
+    // Get a count of the number of textures
+    const {request} = require ('graphql-request')
+
+    const query = `{
+        texture {name src}
+      }`
+
+    const graphql_endpoint = PATH + '/graphql';
+    return request(graphql_endpoint, query).then(async(data) => {
+      const expected = (data.texture.length) + 2
+      // Confirm that the game has preloaded that many (plus its defaults) 
+      const num_textures = await page.evaluate(() => Object.keys(bezier.game.textures.list).length);
+      await expect(num_textures).toEqual(expected)
+    });
   });
 
 });

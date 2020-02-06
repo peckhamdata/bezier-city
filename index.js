@@ -25,7 +25,8 @@ var schema = buildSchema(`
   }
 
   type Query {
-    texture: [Texture]
+    texture(name: String!, level: Int): Texture
+    textures: [Texture]
   }
 `);
 
@@ -37,11 +38,15 @@ var textures = {'sky': {0: {'name': 'pet-sky',
                             'src':  'assets/sky-2012.png'}
                        }
                };
+
 var gfx = new GfxRepo(textures);
 
 // The root provides a resolver function for each API endpoint
 var root = {
-  texture: () => {
+  texture: ({name, level}) => {
+    return gfx.get_texture(name, level);
+  },
+  textures: () => {
     return gfx.get_texture();
   }
 };

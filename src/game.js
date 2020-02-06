@@ -10,7 +10,11 @@ module.exports = class Game {
       this.engagement = -1;
     }
     this.engagement++;
-    const texture = this.repo.get_texture('sky', this.engagement);
-    this.sky.setTexture(texture.name);
+    return this.repo.get_texture('sky', this.engagement).then(data => {
+      console.log(data);
+      console.log('Setting sky to:', data.name);
+      this.sky.setTexture(data.name);
+      return this.engagement;
+    });
   }
 }

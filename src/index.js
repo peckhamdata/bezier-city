@@ -1,5 +1,5 @@
 import Game from './game.js';
-import GfxRepo from './gfx_repo.js';
+import GfxRepoClient from './gfx_repo_client.js';
 import { request } from 'graphql-request'
 
 class preloadScene extends Phaser.Scene {
@@ -11,12 +11,12 @@ class preloadScene extends Phaser.Scene {
       preload()
       {
         const query = `{
-            texture {name src}
+            textures {name src}
           }`
         const graphql_endpoint = window.location.href + 'graphql';
         request(graphql_endpoint, query).then(data => {
-            data.texture.forEach(value => {
-              this.load.image(value.name, value.src); 
+            data.textures.forEach(value => {
+              this.load.image(value.name, value.src);
             });
             this.load.start();
           });
@@ -58,16 +58,8 @@ class gameScene extends Phaser.Scene {
           const bld = this.add.image(1800, 100, 'buildings').setOrigin(0, 0)  // reset the drawing position of the image to the top-left - default is centre
           const bl2 = this.add.image(3800, 100, 'buildings').setOrigin(0, 0)  // reset the drawing position of the image to the top-left - default is centre
 
-          var textures = {'sky': {0: {'name': 'pet-sky', 
-                                      'src':  'assets/petscii-sky.png'}, 
-                                  1: {'name': 'raster-sky',
-                                      'src':  'assets/sky.png'},
-                                  2: {'name': 'sky',
-                                      'src':  'assets/sky-2012.png'}
-                                 }
-                         };
-
-          repo = new GfxRepo(textures);
+          const graphql_endpoint = window.location.href + 'graphql';
+          repo = new GfxRepoClient(graphql_endpoint);
           this.bc.repo = repo;
           this.bc.sky = sky;
           this.bc.max_engagement = 2;
@@ -76,8 +68,8 @@ class gameScene extends Phaser.Scene {
           this.cameras.main.setViewport(0, 0, this.sys.canvas.width, this.sys.canvas.height);
 
           this.input.on('pointerdown', function (pointer) {
-              this.bc.inc_engagement();
-          }, this);       
+              this.bc.inc_engagement(); // .then( () => { return });
+          }, this);
       }
 
       update ()

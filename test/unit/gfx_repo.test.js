@@ -13,7 +13,7 @@ describe('Bézier City', () => {
 
   });
 
-  it('can return all the assets for preloading', () => {
+  it('can return all the assets for preloading', async () => {
     // Give a populated gfx repo
     var textures = {'sky': {0: {'name': 'petscii-sky', 
                                 'src':  'assets/petscii-sky.png'}, 
@@ -21,7 +21,7 @@ describe('Bézier City', () => {
                                 'src':  'assets/raster-sky.png'}}};
     let gr = new GfxRepo(textures);
     // When the Phaser preload asks for all the assets
-    actual = gr.get_texture();
+    actual = await gr.get_texture();
     // It gets them
     var expected = [{name: 'petscii-sky',
                      src:  'assets/petscii-sky.png'},
@@ -30,14 +30,14 @@ describe('Bézier City', () => {
     expect(actual).toEqual(expected);
   });
 
-  it('return image texture based on graphics level requested', () => {
+  it('return image texture based on graphics level requested', async () => {
     // Given
     var textures = {'sky': {0: 'petscii-sky', 
                             1: 'raster-sky'}};
     let gr = new GfxRepo(textures);
     // When
-    var texture_0 = gr.get_texture('sky', 0);
-    var texture_1 = gr.get_texture('sky', 1);
+    var texture_0 = await gr.get_texture('sky', 0);
+    var texture_1 = await gr.get_texture('sky', 1);
     // Then
     expect(texture_0).toMatch('petscii-sky');
     expect(texture_1).toMatch('raster-sky');

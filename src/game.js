@@ -11,8 +11,6 @@ module.exports = class Game {
     }
     this.engagement++;
     return this.repo.get_texture('sky', this.engagement).then(data => {
-      console.log(data);
-      console.log('Setting sky to:', data.name);
       this.sky.setTexture(data.name);
       return this.engagement;
     });

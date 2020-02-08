@@ -8,8 +8,10 @@ const express = require('express')
 
 const winston = require('winston');
 
+const env = process.env.NODE_ENV
+
 //////////////////////////////////////////////////////////////////////////
-// This is the vanilla logger to stat with 
+// This is the vanilla logger to start with 
 
 const logger = winston.createLogger({
   level: 'info',
@@ -29,7 +31,7 @@ const logger = winston.createLogger({
 // If we're not in production then log to the `console` with the format:
 // `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
 // 
-if (process.env.NODE_ENV !== 'production') {
+if (env !== 'production') {
   logger.add(new winston.transports.Console({
     format: winston.format.simple()
   }));
@@ -49,7 +51,7 @@ if (app.get('env') !== 'development') {
 }
 
 // Construct a schema, using GraphQL schema language
-logger.log('info', "Starting Bézier City Server");
+logger.log('info', `Starting Bézier City Server in ${env} environment`);
 
 var schema = buildSchema(`
   type Texture {
@@ -63,13 +65,15 @@ var schema = buildSchema(`
   }
 `);
 
-var textures = {'sky': {0: {'name': 'pet-sky', 
-                            'src':  'assets/sky-pet.png'}, 
-                        1: {'name': 'raster-sky',
-                            'src':  'assets/sky.png'},
-                        2: {'name': 'sky',
-                            'src':  'assets/sky-2012.png'}
-                       }
+var textures = {'sky':  {0: {'name': 'pet-sky', 
+                             'src':  'assets/sky-pet.png'}, 
+                         1: {'name': 'raster-sky',
+                             'src':  'assets/sky.png'},
+                         2: {'name': 'sky',
+                             'src':  'assets/sky-2012.png'}
+                        },
+                'store':{0: {'name': 'buildings',
+                             'src':  'assets/buildings.png'}}        
                };
 
 logger.log('info', "Creating graphics repo");

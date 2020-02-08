@@ -37,7 +37,7 @@ describe('Bézier City', () => {
 
     const graphql_endpoint = PATH + '/graphql';
     return request(graphql_endpoint, query).then(async(data) => {
-      const expected = (data.textures.length) + 2
+      const expected = (data.textures.length) + 3
       // Confirm that the game has preloaded that many (plus its defaults) 
       const num_textures = await page.evaluate(() => Object.keys(bezier.game.textures.list).length);
       await expect(num_textures).toEqual(expected)

@@ -1,7 +1,9 @@
 import Game from './game.js';
 import Street from './street.js';
 import GfxRepoClient from './gfx_repo_client.js';
-import { request } from 'graphql-request'
+import { request } from 'graphql-request';
+import StreetMaker from './street_maker.js';
+
 
 class preloadScene extends Phaser.Scene {
 
@@ -68,63 +70,41 @@ class gameScene extends Phaser.Scene {
           const sky = this.add.image(0, 0, 'sky').setOrigin(0, 0)  // reset the drawing position of the image to the top-left - default is centre
           sky.displayWidth = this.gameWidth;
 
-          // vvv HACK vvv
-
+          var sm = new StreetMaker();
+          var building_names = ['store', 'tower', 'mall', 'bar'];
           var street_desc = {
-            name: 'thomas street',
-            buildings:[
-              {type: 'bar'},
-              {type: 'bar'},
-              {type: 'bar'},
-              {type: 'bar'},
-              {type: 'bar'},
-              {type: 'bar'},
-              {type: 'bar'},
-              {type: 'store'},
-              {type: 'tower'},
-              {type: 'mall'},
-              {type: 'store'},
-              {type: 'bar'},
-              {type: 'store'},
-              {type: 'store'}
-            ],
-            // Foreground street furniture - how distributed?
-            foreground:[
-            ],
-            path: // Each street is a bezier curve defined by three sets of co-ords
-              [{x: 1,  y:  1},
-               {x: 5 , y: 10},
-               {x: 10, y: 15}]
-            };
-            const graphql_endpoint = window.location.href + 'graphql';
-            repo = new GfxRepoClient(graphql_endpoint);
-            this.bc.repo = repo;
-            this.bc.sky = sky;
-            this.bc.max_engagement = 2;
-            this.cursors = this.input.keyboard.createCursorKeys();
-            this.cameras.main.setViewport(0, 0, this.sys.canvas.width, this.sys.canvas.height);
+            buildings: sm.make(building_names, 10, 40)
+          };
 
-            this.input.on('pointerdown', function (pointer) {
-                this.bc.inc_engagement(); 
-            }, this);
+          const graphql_endpoint = window.location.href + 'graphql';
+          repo = new GfxRepoClient(graphql_endpoint);
+          this.bc.repo = repo;
+          this.bc.sky = sky;
+          this.bc.max_engagement = 2;
+          this.cursors = this.input.keyboard.createCursorKeys();
+          this.cameras.main.setViewport(0, 0, this.sys.canvas.width, this.sys.canvas.height);
 
-            var street = new Street(street_desc);
-            street.gfx_repo = repo;
+          this.input.on('pointerdown', function (pointer) {
+              this.bc.inc_engagement(); 
+          }, this);
 
-            this.fg = [];
-            this.bg = [];
+          var street = new Street(street_desc);
+          street.gfx_repo = repo;
 
-            var i;
-            var j;
-            for (j = 0; j < this.num_parallax_layers; j++) {
-              var layer = [];
-              for (i = 0; i < this.num_layer_images; i++) {
-                layer.push(this.add.image(i*1152, 0, 'background').setOrigin(0, 0));  // reset the drawing position of the image to the top-left - default is centre
-              }
-              this.bg.push(layer);
+          this.fg = [];
+          this.bg = [];
+
+          var i;
+          var j;
+          for (j = 0; j < this.num_parallax_layers; j++) {
+            var layer = [];
+            for (i = 0; i < this.num_layer_images; i++) {
+              layer.push(this.add.image(i*1152, 0, 'background').setOrigin(0, 0));  // reset the drawing position of the image to the top-left - default is centre
             }
-            console.log(this.bg);
-            this.buildings = street.render_buildings(this);
+            this.bg.push(layer);
+          }
+          console.log(this.bg);
+          this.buildings = street.render_buildings(this);
       }
 
       update ()

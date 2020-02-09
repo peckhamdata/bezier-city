@@ -107,37 +107,54 @@ class gameScene extends Phaser.Scene {
           this.buildings = street.render_buildings(this);
       }
 
-      update ()
-      {
-
-        if (this.cursors.left.isDown)
-        {
-          if (this.i > 0) {
-            this.i-=10;
-            this.cameras.main.setScroll(this.i, 0);
-            var i = 0;
-            var j = 0;
-            for(i = 0; i < 10; i++) {
-              this.fg[i].x+=20
-              for(j = 0; j < this.num_parallax_layers; j++) {
-                this.bg[j][i].x-=(5-j)
-              }
+      go_left () {
+        if (this.i > 0) {
+          this.i-=10;
+          this.cameras.main.setScroll(this.i, 0);
+          var i = 0;
+          var j = 0;
+          for(i = 0; i < 10; i++) {
+            this.fg[i].x+=20
+            for(j = 0; j < this.num_parallax_layers; j++) {
+              this.bg[j][i].x-=(5-j)
             }
           }
         }
-        else if (this.cursors.right.isDown)
-        {
-          if (this.i < this.gameWidth - this.canvasWidth ) {
-            this.i+=10;
-            this.cameras.main.setScroll(this.i, 0);
-            var i = 0;
-            for(i = 0; i < 10; i++) {
-              this.fg[i].x-=20
-              for(j = 0; j < this.num_parallax_layers; j++) {
-                this.bg[j][i].x+=(5-j)
-              }
+      }
+
+      go_right () {
+        if (this.i < this.gameWidth - this.canvasWidth ) {
+          this.i+=10;
+          this.cameras.main.setScroll(this.i, 0);
+          var i = 0;
+          var j = 0;
+          for(i = 0; i < 10; i++) {
+            this.fg[i].x-=20
+            for(j = 0; j < this.num_parallax_layers; j++) {
+              this.bg[j][i].x+=(5-j)
             }
           }
+        }
+      }
+      update ()
+      {
+        var pointer = this.input.activePointer;
+        if (pointer.isDown) {
+            console.log(pointer.position.x);
+            if(pointer.position.x > (650)) {
+              this.go_right();
+            } else {
+              this.go_left();
+            };
+        }
+
+        if (this.cursors.left.isDown)
+        {
+          this.go_left();
+        }
+        else if (this.cursors.right.isDown)
+        {
+          this.go_right();
         }
       }
 

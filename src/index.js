@@ -12,6 +12,7 @@ class preloadScene extends Phaser.Scene {
       preload()
       {
         // HACK
+        this.load.image('background', 'assets/bg.png')
         this.load.image('foreground', 'assets/foreground.png')
         //
 
@@ -48,6 +49,11 @@ class gameScene extends Phaser.Scene {
         this.gameWidth = 8000 // this.sys.canvas.width;
         this.canvasWidth = 1280
         this.fg;
+        this.bg;
+        // Parallax Layers
+        this.num_layer_images = 10;
+        this.num_parallax_layers = 2;
+
         this.buildings;
         this.cursors;
       }
@@ -67,11 +73,18 @@ class gameScene extends Phaser.Scene {
           var street_desc = {
             name: 'thomas street',
             buildings:[
+              {type: 'bar'},
+              {type: 'bar'},
+              {type: 'bar'},
+              {type: 'bar'},
+              {type: 'bar'},
+              {type: 'bar'},
+              {type: 'bar'},
               {type: 'store'},
-              // {type: 'tower'},
-              // {type: 'mall'},
-              // {type: 'store'},
-              // {type: 'bar'},
+              {type: 'tower'},
+              {type: 'mall'},
+              {type: 'store'},
+              {type: 'bar'},
               {type: 'store'},
               {type: 'store'}
             ],
@@ -99,6 +112,18 @@ class gameScene extends Phaser.Scene {
             street.gfx_repo = repo;
 
             this.fg = [];
+            this.bg = [];
+
+            var i;
+            var j;
+            for (j = 0; j < this.num_parallax_layers; j++) {
+              var layer = [];
+              for (i = 0; i < this.num_layer_images; i++) {
+                layer.push(this.add.image(i*1152, 0, 'background').setOrigin(0, 0));  // reset the drawing position of the image to the top-left - default is centre
+              }
+              this.bg.push(layer);
+            }
+            console.log(this.bg);
             this.buildings = street.render_buildings(this);
       }
 
@@ -111,8 +136,12 @@ class gameScene extends Phaser.Scene {
             this.i-=10;
             this.cameras.main.setScroll(this.i, 0);
             var i = 0;
+            var j = 0;
             for(i = 0; i < 10; i++) {
               this.fg[i].x+=20
+              for(j = 0; j < this.num_parallax_layers; j++) {
+                this.bg[j][i].x-=(5-j)
+              }
             }
           }
         }
@@ -124,6 +153,9 @@ class gameScene extends Phaser.Scene {
             var i = 0;
             for(i = 0; i < 10; i++) {
               this.fg[i].x-=20
+              for(j = 0; j < this.num_parallax_layers; j++) {
+                this.bg[j][i].x+=(5-j)
+              }
             }
           }
         }

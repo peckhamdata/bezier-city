@@ -9,29 +9,29 @@ describe('Street', () => {
 
     var x;
     for(x = 0; x < 7; x++) {
-      scene.add.image.mockReturnValueOnce(x);
+      scene.add.image.mockReturnValueOnce({val:x, setOrigin: jest.fn()});
     }
-
+    scene.add.image.mockReturnValue({setOrigin: jest.fn()});
     // Given a repo with these textures:
 
     const textures = {'store': {0: {'name': 'petscii-store', 
-                                    'src':  'assets/petscii-store.png'}, 
+                                    'src':  'assets/buildings-2.png'}, 
                                 1: {'name': 'raster-store',
                                     'src':  'assets/raster-store.png'}},
                       'tower': {0: {'name': 'petscii-tower', 
-                                    'src':  'assets/petscii-tower.png'}, 
+                                    'src':  'assets/buildings-3.png'}, 
                                 1: {'name': 'raster-tower',
                                     'src':  'assets/raster-tower.png'}},
                        'mall': {0: {'name': 'petscii-mall', 
-                                    'src':  'assets/petscii-mall.png'}, 
+                                    'src':  'assets/buildings-4.png'}, 
                                 1: {'name': 'raster-mall',
                                     'src':  'assets/raster-mall.png'}},
                        'bar':  {0: {'name': 'petscii-bar', 
-                                    'src':  'assets/petscii-bar.png'}, 
+                                    'src':  'assets/buildings-2.png'}, 
                                 1: {'name': 'raster-bar',
                                     'src':  'assets/raster-bar.png'}}};
 
-    var repo = new GfxRepo(textures);
+    var repo = new GfxRepo(textures, 'public/');
     // Given a street descriptor
 
     var street_desc = {
@@ -57,12 +57,8 @@ describe('Street', () => {
     var street = new Street(street_desc);
     street.gfx_repo = repo;
     var buildings = await street.render_buildings(scene);
-    expect(buildings).toEqual([1,2,3,4,5,6,7])
-    // expect(renderer.mock.calls.length).toBe(7);
+    expect(buildings.sort()).toEqual([1,2,3,4,5,6,7])
 
-    // expect(renderer.mock.calls[0][1]).toBe(0);
-    // expect(renderer.mock.calls[0][2]).toBe(0);
-    // expect(renderer.mock.calls[0][3]).toBe('store');
     // When we render the street at a given engagement level
 
     // Then we get a row of buildings

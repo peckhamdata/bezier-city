@@ -4,7 +4,7 @@ module.exports = {
   entry: {
     app: './src/index.js',
     game: './src/game.js',
-    gfx: './src/gfx_repo.js'
+    gfx: './src/gfx_repo_client.js'
   },
   output: {
     filename: '[name].bundle.js',

@@ -57,6 +57,8 @@ var schema = buildSchema(`
   type Texture {
     name: String
     src: String
+    width: Int
+    height: Int
   }
 
   type Query {
@@ -73,12 +75,18 @@ var textures = {'sky':  {0: {'name': 'pet-sky',
                              'src':  'assets/sky-2012.png'}
                         },
                 'store':{0: {'name': 'buildings',
-                             'src':  'assets/buildings.png'}}        
+                             'src':  'assets/buildings.png'}},
+                'tower':{0: {'name': 'tower',
+                             'src':  'assets/buildings-2.png'}},        
+                'mall' :{0: {'name': 'mall',
+                             'src':  'assets/buildings-3.png'}},        
+                'bar':  {0: {'name': 'bar',
+                             'src':  'assets/buildings-4.png'}}        
                };
 
 logger.log('info', "Creating graphics repo");
 
-var gfx = new GfxRepo(textures);
+var gfx = new GfxRepo(textures, 'public/');
 
 // The root provides a resolver function for each API endpoint
 var root = {

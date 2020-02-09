@@ -5,8 +5,8 @@ module.exports = class Street {
   }
 
   render_buildings(scene, engagement_level) {
-    var x = 100;
-    var y = 420;
+    var x = 0;
+    var y = 720;
     var gfx_repo = this.gfx_repo;
     var buildings = this.buildings;
     var result = [];
@@ -15,15 +15,18 @@ module.exports = class Street {
       // Get texture for engagement level from graphics repo
       promises.push(gfx_repo.get_texture(building.type, engagement_level).then((texture) => {
           // Keep count / track of x
-          x+= 1000; 
-          // What about y?
-          return result.push(scene.add.image(x, y, texture.name));
+          var this_x = x;
+          x+=texture.width; 
+          var image = scene.add.image(this_x, y-texture.height, texture.name)
+          image.setOrigin(0, 0);
+          return result.push(image);
         }));
       });
     return Promise.all(promises).then(function(values) {
+      // THIS IS A BIT OF A HACK
       var i;
       for (i = 0; i < 10; i++) {
-        scene.fg.push(scene.add.image(1500+(i*2000), y, 'foreground')); // .setOrigin(0, 0))  // reset the drawing position of the image to the top-left - default is centre
+        scene.fg.push(scene.add.image(1500+(i*2000), 0, 'foreground').setOrigin(0, 0));  // reset the drawing position of the image to the top-left - default is centre
       }
       return values;
     });

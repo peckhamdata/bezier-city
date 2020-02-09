@@ -39,6 +39,7 @@
     "express-sslify": "^1.2.0",
     "graphql": "^14.6.0",
     "graphql-request": "^1.8.2",
+    "jimp": "^0.9.3",
     "newrelic": "^6.2.0",
     "phaser": "^3.22.0",
     "pug": "^2.0.4",

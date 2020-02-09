@@ -9,7 +9,7 @@ module.exports = class GfxRepoClient {
   	if (typeof key == 'undefined') {
 
       const query = `{
-          textures {name src}
+          textures {name src width height}
         }`
       return request(this.api_endpoint, query).then(data => {
           data.textures.forEach(value => {
@@ -24,7 +24,7 @@ module.exports = class GfxRepoClient {
   		}
 
       const query = `{
-          texture(name:"${key}", level:${level}) {name src}
+          texture(name:"${key}", level:${level}) {name src width height}
         }`
       return request(this.api_endpoint, query).then(data => {
           return(data.texture);

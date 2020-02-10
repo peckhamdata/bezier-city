@@ -4,14 +4,19 @@ const Street = require("../../src/street.js")
 describe('Street', () => {
   it('creates a street in Bezier City', async () => {
 
-    // FG is a DIRTY HACK
-    var scene = {fg: [], add: {image: jest.fn()}}
+    // The growing complexity of this mock is a sign of a DIRTY HACK
+    var scene = {fg: [], 
+                 add: {image: jest.fn()},
+                 anims: {generateFrameNumbers: jest.fn(),
+                         create: jest.fn()},
+                 physics: {add: {sprite: jest.fn()}}}
 
     var x;
     for(x = 0; x < 7; x++) {
       scene.add.image.mockReturnValueOnce({val:x, setOrigin: jest.fn()});
     }
     scene.add.image.mockReturnValue({setOrigin: jest.fn()});
+
     // Given a repo with these textures:
 
     const textures = {'store': {0: {'name': 'petscii-store', 

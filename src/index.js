@@ -15,8 +15,22 @@ class preloadScene extends Phaser.Scene {
       {
         // HACK
         this.load.image('background', 'assets/bg.png')
-        this.load.image('foreground', 'assets/foreground.png')
+        this.load.image('foreground', 'assets/foreground.png')  
         //
+
+        this.load.spritesheet('figure-lr', 
+                'assets/figure-lr.png',
+                { frameWidth: 614, 
+                  frameHeight: 537,
+                  startFrame: 0,
+                  endFrame: 13 });
+
+        this.load.spritesheet('figure-rl', 
+                'assets/figure-rl.png',
+                { frameWidth: 614, 
+                  frameHeight: 537,
+                  startFrame: 0,
+                  endFrame: 13 });
 
         const query = `{
             textures {name src}
@@ -47,7 +61,7 @@ class gameScene extends Phaser.Scene {
       constructor(bc) {
         super({key : 'gameScene'});
         this.bc = bc
-        this.i = 0;
+        this.i = 200;
         this.gameWidth = 8000 // this.sys.canvas.width;
         this.canvasWidth = 1280
         this.fg;
@@ -58,6 +72,9 @@ class gameScene extends Phaser.Scene {
 
         this.buildings;
         this.cursors;
+        this.player;
+        this.walking = false;
+        this.facing = 'left';
       }
 
       create ()
@@ -65,10 +82,11 @@ class gameScene extends Phaser.Scene {
           var repo;
           var repeat;
 
-          console.log('in create');
+          
           const gameHeight = this.sys.canvas.hight;
           const sky = this.add.image(0, 0, 'sky').setOrigin(0, 0)  // reset the drawing position of the image to the top-left - default is centre
           sky.displayWidth = this.gameWidth;
+          this.physics.world.setBounds();
 
           var sm = new StreetMaker();
           var building_names = ['store', 'tower', 'mall', 'bar'];
@@ -83,7 +101,7 @@ class gameScene extends Phaser.Scene {
           this.bc.max_engagement = 2;
           this.cursors = this.input.keyboard.createCursorKeys();
           this.cameras.main.setViewport(0, 0, this.sys.canvas.width, this.sys.canvas.height);
-
+          this.cameras.main.setScroll(this.i, 0);
           this.input.on('pointerdown', function (pointer) {
               this.bc.inc_engagement(); 
           }, this);
@@ -94,6 +112,7 @@ class gameScene extends Phaser.Scene {
           this.fg = [];
           this.bg = [];
 
+          // Parallax Mountains
           var i;
           var j;
           for (j = 0; j < this.num_parallax_layers; j++) {
@@ -103,14 +122,28 @@ class gameScene extends Phaser.Scene {
             }
             this.bg.push(layer);
           }
-          console.log(this.bg);
+
           this.buildings = street.render_buildings(this);
       }
-
+      // These two functions can be paramaterised and turned into one
+      // lots of duplication here.
       go_left () {
         if (this.i > 0) {
+          if (!this.walking) {
+            if (this.player.anims.isPaused) {
+              if (this.facing == 'right') {
+                this.player.anims.play('walk-l');
+              }
+              this.player.anims.resume(this.player.anims.currentFrame);
+            } else {
+              this.player.anims.play('walk-l');
+            }
+            this.walking = true;
+            this.facing = 'left';
+          }
           this.i-=10;
           this.cameras.main.setScroll(this.i, 0);
+          this.player.x-=10;
           var i = 0;
           var j = 0;
           for(i = 0; i < 10; i++) {
@@ -124,8 +157,21 @@ class gameScene extends Phaser.Scene {
 
       go_right () {
         if (this.i < this.gameWidth - this.canvasWidth ) {
+          if (!this.walking) {
+            if (this.player.anims.isPaused) {
+              if (this.facing == 'left') {
+                this.player.anims.play('walk-r');
+              }
+              this.player.anims.resume(this.player.anims.currentFrame);
+            } else {
+              this.player.anims.play('walk-r');
+            }
+            this.walking = true;
+            this.facing = 'right';
+          }          
           this.i+=10;
           this.cameras.main.setScroll(this.i, 0);
+          this.player.x+=10;
           var i = 0;
           var j = 0;
           for(i = 0; i < 10; i++) {
@@ -156,6 +202,13 @@ class gameScene extends Phaser.Scene {
         {
           this.go_right();
         }
+        else if (this.cursors.right.isUp)
+        {
+          if (this.walking) {
+            this.player.anims.pause();
+            this.walking = false;
+          }
+        }
       }
 
       resize ()
@@ -170,12 +223,19 @@ export default function bc() {
 
       var config = {
           type: Phaser.CANVAS,
-         scale: {
+          scale: {
               mode: Phaser.Scale.FIT,  // Try with none
               // parent: 'phaser-example',
               autoCenter: Phaser.Scale.CENTER_BOTH,
               width: canvasWidth,
               height: 720
+          },
+          physics: {
+            default: 'arcade',
+            arcade: {
+              gravity: { y: 0 },
+              debug: false
+            }
           },
           canvas: document.getElementById("game")
       };

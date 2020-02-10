@@ -20,15 +20,15 @@ class preloadScene extends Phaser.Scene {
 
         this.load.spritesheet('figure-lr', 
                 'assets/figure-lr.png',
-                { frameWidth: 614, 
-                  frameHeight: 537,
+                { frameWidth: 153, 
+                  frameHeight: 134,
                   startFrame: 0,
                   endFrame: 13 });
 
         this.load.spritesheet('figure-rl', 
                 'assets/figure-rl.png',
-                { frameWidth: 614, 
-                  frameHeight: 537,
+                { frameWidth: 153, 
+                  frameHeight: 134,
                   startFrame: 0,
                   endFrame: 13 });
 
@@ -123,7 +123,38 @@ class gameScene extends Phaser.Scene {
             this.bg.push(layer);
           }
 
-          this.buildings = street.render_buildings(this);
+          var scene = this;
+          this.buildings = street.render_buildings(this).then((texture) => {
+
+            // THIS IS A BIT OF A HACK putting the figure and the foreground items
+            // in here. They need to be factored out BUT only be added
+            // after ALL the background GFX have been added otherwise
+            // Z order gets messed up
+            // Figure
+            var config_1 = {
+                key: 'walk-r',
+                frames: scene.anims.generateFrameNumbers('figure-lr'),
+                frameRate: 10,
+                yoyo: false,
+                repeat: -1
+            };
+            var config_2 = {
+                key: 'walk-l',
+                frames: scene.anims.generateFrameNumbers('figure-rl'),
+                frameRate: 10,
+                yoyo: false,
+                repeat: -1
+            };
+            var anim = scene.anims.create(config_1);
+            var anim_2 = scene.anims.create(config_2);
+            scene.player = scene.physics.add.sprite(400, 584, 'figure').setOrigin(0, 0)
+            scene.player.anims.load('walk-r');
+            scene.player.anims.load('walk-l');
+            var i;
+            for (i = 0; i < 10; i++) {
+              scene.fg.push(scene.add.image(1500+(i*2000), 0, 'foreground').setOrigin(0, 0));  // reset the drawing position of the image to the top-left - default is centre
+            }
+          });
       }
       // These two functions can be paramaterised and turned into one
       // lots of duplication here.

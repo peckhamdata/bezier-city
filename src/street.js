@@ -23,36 +23,6 @@ module.exports = class Street {
         }));
       });
     return Promise.all(promises).then(function(values) {
-      // THIS IS A BIT OF A HACK putting the figure and the foreground items
-      // in here. They need to be factored out BUT only be added
-      // after ALL the background GFX have been added otherwise
-      // Z order gets messed up
-      // Figure
-      var config_1 = {
-          key: 'walk-r',
-          frames: scene.anims.generateFrameNumbers('figure-lr'),
-          frameRate: 10,
-          yoyo: false,
-          repeat: -1
-      };
-      var config_2 = {
-          key: 'walk-l',
-          frames: scene.anims.generateFrameNumbers('figure-rl'),
-          frameRate: 10,
-          yoyo: false,
-          repeat: -1
-      };
-      var anim = scene.anims.create(config_1);
-      var anim_2 = scene.anims.create(config_2);
-      scene.player = scene.physics.add.sprite(400, 184, 'figure').setOrigin(0, 0)
-      scene.player.anims.load('walk-r');
-      scene.player.anims.load('walk-l');
-      var i;
-      for (i = 0; i < 10; i++) {
-        scene.fg.push(scene.add.image(1500+(i*2000), 0, 'foreground').setOrigin(0, 0));  // reset the drawing position of the image to the top-left - default is centre
-      }
-
-
       return values;
     });
   }

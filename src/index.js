@@ -133,8 +133,9 @@ class gameScene extends Phaser.Scene {
             if (this.player.anims.isPaused) {
               if (this.facing == 'right') {
                 this.player.anims.play('walk-l');
+              } else {
+                this.player.anims.resume(this.player.anims.currentFrame);
               }
-              this.player.anims.resume(this.player.anims.currentFrame);
             } else {
               this.player.anims.play('walk-l');
             }
@@ -161,14 +162,15 @@ class gameScene extends Phaser.Scene {
             if (this.player.anims.isPaused) {
               if (this.facing == 'left') {
                 this.player.anims.play('walk-r');
+              } else {
+                this.player.anims.resume(this.player.anims.currentFrame);
               }
-              this.player.anims.resume(this.player.anims.currentFrame);
             } else {
               this.player.anims.play('walk-r');
             }
             this.walking = true;
             this.facing = 'right';
-          }          
+          }
           this.i+=10;
           this.cameras.main.setScroll(this.i, 0);
           this.player.x+=10;
@@ -192,25 +194,24 @@ class gameScene extends Phaser.Scene {
             } else {
               this.go_left();
             };
-        }
-
-        if (this.cursors.left.isDown)
-        {
-          this.go_left();
-        }
-        else if (this.cursors.right.isDown)
-        {
-          this.go_right();
-        }
-        else if (this.cursors.right.isUp)
-        {
-          if (this.walking) {
-            this.player.anims.pause();
-            this.walking = false;
+        } else {
+          if (this.cursors.left.isDown)
+          {
+            this.go_left();
+          }
+          else if (this.cursors.right.isDown)
+          {
+            this.go_right();
+          }
+          else if (this.cursors.right.isUp)
+          {
+            if (this.walking) {
+              this.player.anims.pause();
+              this.walking = false;
+            }
           }
         }
       }
-
       resize ()
       {
 

@@ -89,7 +89,7 @@ class gameScene extends Phaser.Scene {
           this.physics.world.setBounds();
 
           var sm = new StreetMaker();
-          var building_names = ['store', 'tower', 'mall', 'bar'];
+          var building_names = ['store', 'tower', 'mall', 'bar', 'store'];
           var street_desc = {
             buildings: sm.make(building_names, 10, 40)
           };
@@ -102,8 +102,15 @@ class gameScene extends Phaser.Scene {
           this.cursors = this.input.keyboard.createCursorKeys();
           this.cameras.main.setViewport(0, 0, this.sys.canvas.width, this.sys.canvas.height);
           this.cameras.main.setScroll(this.i, 0);
-          this.input.on('pointerdown', function (pointer) {
-              this.bc.inc_engagement(); 
+
+          this.input.on('pointerdown', function () {
+
+              // Camera Fun
+              // var cam = this.cameras.main;
+
+              //     cam.pan(this.canvasWidth / 2, this.gameHeight / 2);
+              //     cam.zoomTo(2);
+
           }, this);
 
           var street = new Street(street_desc);

@@ -156,11 +156,22 @@ class gameScene extends Phaser.Scene {
                 yoyo: false,
                 repeat: -1
             };
+            var config_3 = {
+              key: 'stand',
+              frames: scene.anims.generateFrameNumbers('figure-lr', { frames: [1, 2]}),
+              frameRate: 10,
+              yoyo: false,
+              repeat: -1
+          };
+
             var anim = scene.anims.create(config_1);
             var anim_2 = scene.anims.create(config_2);
             scene.player = scene.physics.add.sprite(400, 584, 'figure').setOrigin(0, 0)
             scene.player.anims.load('walk-r');
             scene.player.anims.load('walk-l');
+            scene.player.anims.load('stand');
+            scene.player.anims.play('stand');
+            this.player.anims.pause();
             var i;
             for (i = 0; i < 10; i++) {
               scene.fg.push(scene.add.image(1500+(i*2000), 0, 'foreground').setOrigin(0, 0));  // reset the drawing position of the image to the top-left - default is centre

@@ -4,6 +4,11 @@ import GfxRepoClient from './gfx_repo_client.js';
 import { request } from 'graphql-request';
 import StreetMaker from './street_maker.js';
 
+const urlPieces = [location.protocol, '//', location.host, location.pathname]
+const api_root = urlPieces.join('')
+
+const graphql_endpoint = api_root + 'graphql';
+
 
 class preloadScene extends Phaser.Scene {
 
@@ -35,7 +40,7 @@ class preloadScene extends Phaser.Scene {
         const query = `{
             textures {name src}
           }`
-        const graphql_endpoint = window.location.href + 'graphql';
+
         request(graphql_endpoint, query).then(data => {
             data.textures.forEach(value => {
               this.load.image(value.name, value.src);
@@ -94,7 +99,6 @@ class gameScene extends Phaser.Scene {
             buildings: sm.make(building_names, 10, 40)
           };
 
-          const graphql_endpoint = window.location.href + 'graphql';
           repo = new GfxRepoClient(graphql_endpoint);
           this.bc.repo = repo;
           this.bc.sky = sky;

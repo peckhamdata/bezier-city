@@ -5,6 +5,7 @@
 ## Dependencies
 
 * [node.js](https://nodejs.org/)
+* [webpack](https://webpack.js.org/)
 
 ## Installation
 

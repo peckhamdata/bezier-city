@@ -67,3 +67,7 @@ Run locally with:
 `npm run start`
 
 Deploy to Heroku by commiting to `master`
+
+# Copyright
+
+(C) Copyright 2023 Peckham Data Centre Ltd. All Rights Reserved.

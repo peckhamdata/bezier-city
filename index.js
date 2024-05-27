@@ -1,5 +1,6 @@
 require ('newrelic');
-var graphqlHTTP = require('express-graphql');
+// var graphqlHTTP = require('express-graphql');
+var { createHandler } = require('graphql-http/lib/use/express');
 var { buildSchema } = require('graphql');
 
 const GfxRepo = require("./src/gfx_repo.js")
@@ -98,7 +99,7 @@ var root = {
   }
 };
 
-app.use('/graphql', graphqlHTTP({
+app.use('/graphql', createHandler({
   schema: schema,
   rootValue: root,
   graphiql: true,

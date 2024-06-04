@@ -1,4 +1,4 @@
-const StreetMaker = require("../../src/street_maker.js")
+import {StreetMaker} from "../../src/street_maker.js";
 
 describe('Street Maker', () => {
   it('Make a street from an LCG sequence and a set of buildings', () => {

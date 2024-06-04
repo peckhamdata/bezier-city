@@ -1,4 +1,4 @@
-const GfxRepo = require("../../src/gfx_repo.js")
+import {GfxRepo} from "../../src/gfx_repo.js";
 
 describe('Bézier City', () => {
   it('can be stocked with new textures', () => {
@@ -21,7 +21,7 @@ describe('Bézier City', () => {
                                 'src':  'assets/raster-sky.png'}}};
     let gr = new GfxRepo(textures, 'public/');
     // When the Phaser preload asks for all the assets
-    actual = await gr.get_texture();
+    var actual = await gr.get_texture();
     // It gets them
     var expected = [{name: 'petscii-sky',
                       src:  'assets/petscii-sky.png'},

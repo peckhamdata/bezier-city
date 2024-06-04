@@ -1,5 +1,6 @@
-const GfxRepo = require("../../src/gfx_repo.js")
-const Street = require("../../src/street.js")
+import {jest} from '@jest/globals';
+import {GfxRepo} from "../../src/gfx_repo.js";
+import {Street}  from "../../src/street.js";
 
 describe('Street', () => {
   it('creates a street in Bezier City', async () => {

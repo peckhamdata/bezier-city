@@ -1,9 +1,10 @@
-const GfxRepo = require("../../src/gfx_repo.js");
+import {jest} from '@jest/globals';
+import {GfxRepo} from "../../src/gfx_repo.js";
 
 // To Mock Phaser objects like the Sky we can't
 // refer to Phaser itself as it will throw errors
 // when it can't see the browser objects it is expecting
-const Game = require("../../src/game.js")
+import {Game} from "../../src/game.js";
 var repo;
 var game;
 var sky = {};
@@ -44,7 +45,7 @@ describe('Game', () => {
   it('Changes the background gfx when you go up an engagement level', async () => {
   	// Given the game knows where the sky is
 
-  	result = await game.inc_engagement();
+  	var result = await game.inc_engagement();
   	// When the engagement level increases
   	expect(game.engagement).toEqual(1);
   	// Then the new sky texture comes out of the gfx repo...

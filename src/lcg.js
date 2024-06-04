@@ -6,7 +6,7 @@
  
 // in order to work 'Math.seed' must NOT be undefined,
 // so in any case, you HAVE to provide a Math.seed
-lcg_sequence = function(seed, max, min, length) {
+export function lcg_sequence(seed, max, min, length) {
     max = max || 1;
     min = min || 0;
     var result = []
@@ -21,6 +21,4 @@ lcg_sequence = function(seed, max, min, length) {
   	return result;
  
 }
-
-module.exports = lcg_sequence 
 

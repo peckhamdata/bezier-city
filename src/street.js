@@ -1,4 +1,4 @@
-module.exports = class Street {
+export class Street {
   constructor(street_desc, gfx_repo) {
     this.buildings = street_desc.buildings;
     this.gfx_repo = gfx_repo;

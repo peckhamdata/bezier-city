@@ -1,6 +1,6 @@
-const {request} = require('graphql-request');
+import {request} from 'graphql-request'
 
-module.exports = class GfxRepoClient {
+export class GfxRepoClient {
   constructor(api_endpoint) {
     this.api_endpoint = api_endpoint;
   }

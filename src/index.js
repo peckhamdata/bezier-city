@@ -1,8 +1,8 @@
-import Game from './game.js';
-import Street from './street.js';
-import GfxRepoClient from './gfx_repo_client.js';
-import { request } from 'graphql-request';
-import StreetMaker from './street_maker.js';
+import {Game} from './game.js';
+import {Street} from './street.js';
+import {GfxRepoClient} from './gfx_repo_client.js';
+import {request} from 'graphql-request';
+import {StreetMaker} from './street_maker.js';
 
 const urlPieces = [location.protocol, '//', location.host, location.pathname]
 const api_root = urlPieces.join('')

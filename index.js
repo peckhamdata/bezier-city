@@ -1,13 +1,11 @@
-require ('newrelic');
+// require ('newrelic');
 // var graphqlHTTP = require('express-graphql');
-var { createHandler } = require('graphql-http/lib/use/express');
-var { buildSchema } = require('graphql');
+import {createHandler} from 'graphql-http/lib/use/express';
+import {buildSchema} from 'graphql';
 
-const GfxRepo = require("./src/gfx_repo.js")
-
-const express = require('express')
-
-const winston = require('winston');
+import {GfxRepo} from "./src/gfx_repo.js";
+import express from 'express';
+import winston from 'winston';
 
 const env = process.env.NODE_ENV
 
@@ -42,10 +40,10 @@ if (env !== 'production') {
 const app = express()
 const port = process.env.PORT || 3000
 
-var fs = require('fs');
-var enforce = require('express-sslify');
+import fs from 'fs';
+import enforce from 'express-sslify';
 
-revision = fs.readFileSync('revision.txt', 'utf8');
+const revision = fs.readFileSync('revision.txt', 'utf8');
 
 if (app.get('env') !== 'development') {
   app.use(enforce.HTTPS({ trustProtoHeader: true }));

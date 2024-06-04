@@ -1,4 +1,4 @@
-module.exports = class Game {
+export class Game {
   constructor(repo, sky) {
     this.repo = repo;
     this.sky = sky;

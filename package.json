@@ -2,9 +2,10 @@
   "name": "bezier-city",
   "version": "1.0.0",
   "description": "`I woke up in Bezier City`",
-  "main": "index.js",
+  "exports": "./index.js",
+  "type": "module",
   "scripts": {
-    "test": "jest",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "start": "node index.js",
     "build": "webpack"
   },
@@ -47,8 +48,8 @@
     "winston": "^3.13.0"
   },
   "jest": {
-    "displayName": "Browser",
     "verbose": true,
+    "transform": {},
     "projects": [
       {
         "displayName": "Browser",
@@ -64,8 +65,7 @@
         "displayName": "Unit",
         "testMatch": [
           "<rootDir>/test/unit/**/*.test.js"
-        ],
-        "verbose": true
+        ]
       }
     ]
   }

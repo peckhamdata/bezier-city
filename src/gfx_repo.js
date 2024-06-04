@@ -1,6 +1,6 @@
-const Jimp = require('jimp');
+import Jimp from 'jimp';
 
-module.exports = class GfxRepo {
+export class GfxRepo {
   constructor(gfx_data, root) {
     this.gfx_data = gfx_data;
     this.root = root;

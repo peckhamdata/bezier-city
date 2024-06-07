@@ -1,8 +1,5 @@
 import {jest} from '@jest/globals';
 
-// jest.mock('graphql-request');
-// import {request} from 'graphql-request';
-
 jest.unstable_mockModule('graphql-request', () => ({
   request: jest.fn()
 }));

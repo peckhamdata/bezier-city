@@ -89,7 +89,7 @@ class gameScene extends Phaser.Scene {
 
           
           const gameHeight = this.sys.canvas.hight;
-          const sky = this.add.image(0, 0, 'sky').setOrigin(0, 0)  // reset the drawing position of the image to the top-left - default is centre
+          const sky = this.add.image(0, 0, 'pet-sky').setOrigin(0, 0)  // reset the drawing position of the image to the top-left - default is centre
           sky.displayWidth = this.gameWidth;
           this.physics.world.setBounds();
 

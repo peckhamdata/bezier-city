@@ -3,6 +3,7 @@ import {Street} from './street.js';
 import {GfxRepoClient} from './gfx_repo_client.js';
 import {request} from 'graphql-request';
 import {StreetMaker} from './street_maker.js';
+import Phaser from 'phaser';
 
 const urlPieces = [location.protocol, '//', location.host, location.pathname]
 const api_root = urlPieces.join('')
@@ -23,30 +24,33 @@ class preloadScene extends Phaser.Scene {
         this.load.image('foreground', 'assets/foreground.png')  
         //
 
-        this.load.spritesheet('figure-lr', 
-                'assets/figure-lr.png',
-                { frameWidth: 153, 
-                  frameHeight: 134,
-                  startFrame: 0,
-                  endFrame: 13 });
+        // Dialogue for NPCs
+        // this.load.image('dialog', 'assets/dialog-nine-slice.png');
 
-        this.load.spritesheet('figure-rl', 
-                'assets/figure-rl.png',
-                { frameWidth: 153, 
-                  frameHeight: 134,
-                  startFrame: 0,
-                  endFrame: 13 });
+         this.load.spritesheet('figure-lr', 
+                 'assets/figure-lr.png',
+                 { frameWidth: 153, 
+                   frameHeight: 134,
+                   startFrame: 0,
+                   endFrame: 13 });
 
-        const query = `{
-            textures {name src}
-          }`
+         this.load.spritesheet('figure-rl', 
+                 'assets/figure-rl.png',
+                 { frameWidth: 153, 
+                   frameHeight: 134,
+                   startFrame: 0,
+                   endFrame: 13 });
 
-        request(graphql_endpoint, query).then(data => {
-            data.textures.forEach(value => {
-              this.load.image(value.name, value.src);
-            });
+         const query = `{
+             textures {name src}
+           }`
+
+         request(graphql_endpoint, query).then(data => {
+             data.textures.forEach(value => {
+               this.load.image(value.name, value.src);
+             });
             this.load.start();
-          });
+         });
 
         this.load.on('progress', this.updateBar);
         this.load.on('complete', this.complete, {scene:this.scene});
@@ -80,13 +84,23 @@ class gameScene extends Phaser.Scene {
         this.player;
         this.walking = false;
         this.facing = 'left';
+
+        this.npc;
       }
 
+      preload ()
+      {
+          this.load.image('dialog', 'assets/dialog-nine-slice.png');
+      }
+  
       create ()
       {
           var repo;
           var repeat;
 
+          // Louie code
+          this.aKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+          this.dKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
           
           const gameHeight = this.sys.canvas.hight;
           const sky = this.add.image(0, 0, 'pet-sky').setOrigin(0, 0)  // reset the drawing position of the image to the top-left - default is centre
@@ -107,15 +121,15 @@ class gameScene extends Phaser.Scene {
           this.cameras.main.setViewport(0, 0, this.sys.canvas.width, this.sys.canvas.height);
           this.cameras.main.setScroll(this.i, 0);
 
-          this.input.on('pointerdown', function () {
+          // this.input.on('pointerdown', function () {
 
-              // Camera Fun
-              // var cam = this.cameras.main;
+          //     // Camera Fun
+          //     var cam = this.cameras.main;
 
-              //     cam.pan(this.canvasWidth / 2, this.gameHeight / 2);
-              //     cam.zoomTo(2);
+          //         cam.pan(this.canvasWidth / 2, this.gameHeight / 2);
+          //         cam.zoomTo(2);
 
-          }, this);
+          // }, this);
 
           var street = new Street(street_desc);
           street.gfx_repo = repo;
@@ -164,20 +178,40 @@ class gameScene extends Phaser.Scene {
               repeat: -1
           };
 
-            var anim = scene.anims.create(config_1);
-            var anim_2 = scene.anims.create(config_2);
-            scene.player = scene.physics.add.sprite(400, 584, 'figure').setOrigin(0, 0)
-            scene.player.anims.load('walk-r');
-            scene.player.anims.load('walk-l');
-            scene.player.anims.load('stand');
-            scene.player.anims.play('stand');
-            this.player.anims.pause();
+          scene.anims.create(config_1);
+          scene.anims.create(config_2);
+          scene.player = scene.physics.add.sprite(200, 584, 'figure').setOrigin(0, 0)
+          scene.player.anims.load('walk-r');
+          scene.player.anims.load('walk-l');
+          scene.player.anims.load('stand');
+          scene.player.anims.play('stand');
+          this.player.anims.pause();
+
+          // Placeholder NPC
+          scene.npc = scene.physics.add.sprite(2200, 584, 'figure').setOrigin(0, 0)
+          scene.npc.anims.load('walk-l');
+          scene.npc.anims.play('walk-l');
+          this.npc.anims.pause();
+
+          scene.fg.push(scene.add.nineslice(400,
+            300,
+            'dialog',
+            undefined,
+            400,
+            300,
+            36,
+            36,
+            36,
+            36));
+
             var i;
             for (i = 0; i < 10; i++) {
-              scene.fg.push(scene.add.image(1500+(i*2000), 0, 'foreground').setOrigin(0, 0));  // reset the drawing position of the image to the top-left - default is centre
+              scene.fg.push(scene.add.image(1500+(i*6000), 0, 'foreground').setOrigin(0, 0));  // reset the drawing position of the image to the top-left - default is centre
             }
           });
+
       }
+
       // These two functions can be paramaterised and turned into one
       // lots of duplication here.
       go_left () {
@@ -239,6 +273,15 @@ class gameScene extends Phaser.Scene {
       }
       update ()
       {
+
+        if (this.aKey.isDown) {
+          this.go_left();
+        }
+
+        if (this.dKey.isDown) {
+          this.go_right();
+        }
+
         var pointer = this.input.activePointer;
         if (pointer.isDown) {
             console.log(pointer.position.x);
@@ -276,10 +319,9 @@ export default function bc() {
       const canvasWidth = 1280
 
       var config = {
-          type: Phaser.CANVAS,
+          type: Phaser.AUTO,
           scale: {
               mode: Phaser.Scale.FIT,  // Try with none
-              // parent: 'phaser-example',
               autoCenter: Phaser.Scale.CENTER_BOTH,
               width: canvasWidth,
               height: 720
@@ -291,10 +333,10 @@ export default function bc() {
               debug: false
             }
           },
-          canvas: document.getElementById("game")
+          // canvas: document.getElementById("game")
       };
       var bc = new Game();
-
+    
       var game = new Phaser.Game(config);
       // load scenes
       game.scene.add('preloadScene', new preloadScene());

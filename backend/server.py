@@ -26,18 +26,27 @@ def bezier_length(P0, P1, P2, num_samples=50):
     return math.floor(length), points
 
 def find_junction_distances(junctions, points):
-    """Find the distance along the curve for each junction."""
-    distances = []
+    """Find the distance along the curve for each junction, removing duplicates."""
+    distances = set()
     total_length = 0
     
     for i in range(len(points) - 1):
         segment_length = math.dist(points[i], points[i + 1])
         for j in junctions:
             if math.isclose(j["x"], points[i][0], abs_tol=5) and math.isclose(j["y"], points[i][1], abs_tol=5):
-                distances.append({"distance": math.floor(total_length)})
+                distances.add(math.floor(total_length))
         total_length += segment_length
     
-    return distances
+    return sorted([{"distance": d} for d in distances], key=lambda j: j["distance"])
+
+def generate_ascii_street(length, junctions):
+    """Generate an ASCII representation of the street with junctions only."""
+    street_representation = [" "] * length
+    
+    for junction in junctions:
+        street_representation[junction["distance"]] = "^"
+    
+    return "".join(street_representation).rstrip()
 
 @app.get("/streets")
 def get_street_list():
@@ -60,6 +69,13 @@ def get_street(street_id: int):
     junction_distances = find_junction_distances(street["junctions"], points)
     
     return {"id": street_id, "length": length, "junctions": junction_distances}
+
+@app.get("/street/{street_id}/ascii")
+def get_ascii_street(street_id: int):
+    """Retrieve an ASCII representation of the street with junctions only."""
+    street = get_street(street_id)
+    ascii_representation = generate_ascii_street(street["length"], street["junctions"])
+    return {"id": street_id, "ascii": ascii_representation}
 
 if __name__ == "__main__":
     import uvicorn

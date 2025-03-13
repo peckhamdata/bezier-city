@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "bezier-city-backend"
+version = "0.1.0"
+description = "Provide things needed like the city map and buildings for the Bézier City game frontend"
+authors = ["chrisyoung.io <chris@chrisyoung.io>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.11"
+uvicorn = "^0.34.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

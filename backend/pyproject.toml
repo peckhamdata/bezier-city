@@ -9,6 +9,8 @@ readme = "README.md"
 python = "^3.12"
 fastapi = "^0.115.11"
 uvicorn = "^0.34.0"
+pandas = "^2.2.3"
+ace-tools = "^0.0"
 
 
 [build-system]

@@ -1,7 +1,15 @@
 import random
-import pandas as pd
 
-def fill_street_with_buildings(street, buildings):
+buildings = {
+    "Office": {"ascii": "O", "width": 8},
+    "Bar": {"ascii": "B", "width": 5},
+    "Yoga Studio": {"ascii": "Y", "width": 6},
+    "Industrial": {"ascii": "I", "width": 12},
+    "Workshop": {"ascii": "W", "width": 7},
+    "Apartment Building": {"ascii": "A", "width": 10},
+}
+
+def fill_street_with_buildings(street, buildings=buildings):
     """Fills the street with buildings while ensuring junctions occupy 1-width spaces."""
 
     # Extract street length and junction positions
@@ -69,18 +77,13 @@ street = {
     ]
 }
 
-buildings = {
-    "Office": {"ascii": "O", "width": 8},
-    "Bar": {"ascii": "B", "width": 5},
-    "Yoga Studio": {"ascii": "Y", "width": 6},
-    "Industrial": {"ascii": "I", "width": 12},
-    "Workshop": {"ascii": "W", "width": 7},
-    "Apartment Building": {"ascii": "A", "width": 10},
-}
+def render_street(street, placed_elements):
+    """Creates a compact string representation of the street using single-character tokens for buildings."""
+    
+    street_representation = []  # List of characters for rendering
 
-# Generate the filled street layout
-filled_street = fill_street_with_buildings(street, buildings)
+    for element in placed_elements:
+        ascii_char = element["ascii"]
+        street_representation.append(ascii_char)  # Append each building/junction as a single token
 
-# Convert results to a DataFrame for readability
-df = pd.DataFrame(filled_street)
-print(df.to_string(index=False))  # Print table format output
+    return "".join(street_representation)  # Convert list to string for rendering

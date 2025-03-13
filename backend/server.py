@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from bezier_city_backend.buildings import fill_street_with_buildings, render_street 
 import json
 import math
 
@@ -74,8 +75,9 @@ def get_street(street_id: int):
 def get_ascii_street(street_id: int):
     """Retrieve an ASCII representation of the street with junctions only."""
     street = get_street(street_id)
-    ascii_representation = generate_ascii_street(street["length"], street["junctions"])
-    return {"id": street_id, "ascii": ascii_representation}
+    filled_street = fill_street_with_buildings(street)
+
+    return {"id": street_id, "ascii": render_street(street, filled_street)}
 
 if __name__ == "__main__":
     import uvicorn

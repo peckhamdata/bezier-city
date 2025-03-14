@@ -79,6 +79,68 @@ def get_ascii_street(street_id: int):
 
     return {"id": street_id, "ascii": render_street(street, filled_street)}
 
+# Sample building data structure
+BUILDINGS = {
+    "A": {
+        "name": "Skyscraper",
+        "description": "A tall modern skyscraper",
+        "assets": {
+            0: "https://example.com/assets/buildings/A/wireframe.txt",
+            1: "https://example.com/assets/buildings/A/petscii.txt",
+            2: "https://example.com/assets/buildings/A/bitmap.png",
+            3: "https://example.com/assets/buildings/A/polygon.obj"
+        }
+    },
+    "B": {
+        "name": "Warehouse",
+        "description": "A large industrial warehouse",
+        "assets": {
+            0: "https://example.com/assets/buildings/B/wireframe.txt",
+            1: "https://example.com/assets/buildings/B/petscii.txt",
+            2: "https://example.com/assets/buildings/B/bitmap.png",
+            3: "https://example.com/assets/buildings/B/polygon.obj"
+        }
+    }
+}
+
+@app.get("/building/{building_id}")
+def get_building_info(building_id: str):
+    building = BUILDINGS.get(building_id)
+    if not building:
+        raise HTTPException(status_code=404, detail="Building not found")
+    
+    return {
+        "id": building_id,
+        "name": building["name"],
+        "description": building["description"],
+        "available_levels": list(building["assets"].keys())
+    }
+
+@app.get("/building/{building_id}/{level}")
+def get_building_asset(building_id: str, level: int):
+    building = BUILDINGS.get(building_id)
+    if not building:
+        raise HTTPException(status_code=404, detail="Building not found")
+    
+    asset_url = building["assets"].get(level)
+    if asset_url is None:
+        raise HTTPException(status_code=404, detail="Asset level not found")
+    
+    return {
+        "id": building_id,
+        "level": level,
+        "asset_url": asset_url
+    }
+
+@app.get("/buildings")
+def get_all_buildings():
+    return [{
+        "id": building_id,
+        "name": data["name"],
+        "description": data["description"],
+        "available_levels": list(data["assets"].keys())
+    } for building_id, data in BUILDINGS.items()]
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

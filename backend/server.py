@@ -3,7 +3,23 @@ from bezier_city_backend.buildings import fill_street_with_buildings, render_str
 import json
 import math
 
+from fastapi.middleware.cors import CORSMiddleware
+
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+]
+
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # Load the city data from file
 with open("city_1_with_junctions.json", "r") as f:
@@ -86,7 +102,7 @@ BUILDINGS = {
         "description": "A tall modern skyscraper",
         "assets": {
             0: "https://example.com/assets/buildings/A/wireframe.txt",
-            1: "https://example.com/assets/buildings/A/petscii.txt",
+            1: "assets/01_block.png",
             2: "https://example.com/assets/buildings/A/bitmap.png",
             3: "https://example.com/assets/buildings/A/polygon.obj"
         }
@@ -96,7 +112,37 @@ BUILDINGS = {
         "description": "A large industrial warehouse",
         "assets": {
             0: "https://example.com/assets/buildings/B/wireframe.txt",
-            1: "https://example.com/assets/buildings/B/petscii.txt",
+            1: "assets/01_office.png",
+            2: "https://example.com/assets/buildings/B/bitmap.png",
+            3: "https://example.com/assets/buildings/B/polygon.obj"
+        }
+    },
+    "C": {
+        "name": "Brutal",
+        "description": "Brutalist thing",
+        "assets": {
+            0: "https://example.com/assets/buildings/A/wireframe.txt",
+            1: "assets/01_brut.png",
+            2: "https://example.com/assets/buildings/A/bitmap.png",
+            3: "https://example.com/assets/buildings/A/polygon.obj"
+        }
+    },
+    "D": {
+        "name": "Warehouse",
+        "description": "A large industrial warehouse",
+        "assets": {
+            0: "https://example.com/assets/buildings/B/wireframe.txt",
+            1: "assets/01_glass.png",
+            2: "https://example.com/assets/buildings/B/bitmap.png",
+            3: "https://example.com/assets/buildings/B/polygon.obj"
+        }
+    },
+    "E": {
+        "name": "Warehouse",
+        "description": "A large industrial warehouse",
+        "assets": {
+            0: "https://example.com/assets/buildings/B/wireframe.txt",
+            1: "assets/01_honeycomb.png",
             2: "https://example.com/assets/buildings/B/bitmap.png",
             3: "https://example.com/assets/buildings/B/polygon.obj"
         }
@@ -113,7 +159,7 @@ def get_building_info(building_id: str):
         "id": building_id,
         "name": building["name"],
         "description": building["description"],
-        "available_levels": list(building["assets"].keys())
+        "assets": building["assets"]
     }
 
 @app.get("/building/{building_id}/{level}")
@@ -134,12 +180,7 @@ def get_building_asset(building_id: str, level: int):
 
 @app.get("/buildings")
 def get_all_buildings():
-    return [{
-        "id": building_id,
-        "name": data["name"],
-        "description": data["description"],
-        "available_levels": list(data["assets"].keys())
-    } for building_id, data in BUILDINGS.items()]
+    return BUILDINGS
 
 if __name__ == "__main__":
     import uvicorn

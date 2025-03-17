@@ -1,12 +1,11 @@
 import random
 
 buildings = {
-    "Office": {"ascii": "O", "width": 8},
+    "Office": {"ascii": "A", "width": 8},
     "Bar": {"ascii": "B", "width": 5},
-    "Yoga Studio": {"ascii": "Y", "width": 6},
-    "Industrial": {"ascii": "I", "width": 12},
-    "Workshop": {"ascii": "W", "width": 7},
-    "Apartment Building": {"ascii": "A", "width": 10},
+    "Yoga Studio": {"ascii": "C", "width": 6},
+    "Industrial": {"ascii": "D", "width": 12},
+    "Workshop": {"ascii": "E", "width": 7},
 }
 
 def fill_street_with_buildings(street, buildings=buildings):

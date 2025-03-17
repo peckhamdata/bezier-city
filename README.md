@@ -41,33 +41,7 @@ It occured to me today that it might be nice if you encountered characters from 
 video games. Danger here is it becomes a bit Wreck it Ralph. No bad thing but I can imagine there are rights
 issues to negotiate :-)
 
-## Dependencies
-
-* [node.js](https://nodejs.org/)
-* [webpack](https://webpack.js.org/)
-
-## Installation
-
-* Clone this repository
-
-## Testing
-
-Run the tests with `npm run test` or simply `jest`
-
-The browser based tests take a little longer to run. For just the unit tests use:
-
-```
-jest --roots test/unit
-```
-
-## Deployment
-
-Run locally with:
-
-`npm run start`
-
-Deploy to Heroku by commiting to `master`
 
 # Copyright
 
-(C) Copyright 2023 Peckham Data Centre Ltd. All Rights Reserved.
+(C) Copyright 2025 Peckham Data Centre Ltd. All Rights Reserved.

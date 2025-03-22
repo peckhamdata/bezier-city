@@ -13,7 +13,7 @@ def fill_street_with_buildings(street, buildings=buildings):
 
     # Extract street length and junction positions
     street_length = street["length"]
-    junction_positions = {j["distance"] for j in street["junctions"]}
+    junction_positions = street["junction_offsets"]
 
     # Ensure junctions take up a width of 1
     junction_width = 1
@@ -64,17 +64,6 @@ def fill_street_with_buildings(street, buildings=buildings):
         current_position += building_width
 
     return placed_elements
-
-# Example usage
-street = {
-    "id": 4,
-    "length": 988,
-    "junctions": [
-        {"distance": 400}, {"distance": 463}, {"distance": 482},
-        {"distance": 491}, {"distance": 500}, {"distance": 509},
-        {"distance": 517}, {"distance": 527}
-    ]
-}
 
 def render_street(street, placed_elements):
     """Creates a compact string representation of the street using single-character tokens for buildings."""

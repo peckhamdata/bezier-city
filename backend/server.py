@@ -42,38 +42,29 @@ def bezier_length(P0, P1, P2, num_samples=50):
     
     return math.floor(length), points
 
-def find_junction_distances(junctions, points):
+def find_junction_offsets(junctions, points):
     """Find the distance along the curve for each junction, removing duplicates."""
-    distances = set()
+    distances = []
     total_length = 0
     
     for i in range(len(points) - 1):
         segment_length = math.dist(points[i], points[i + 1])
         for j in junctions:
             if math.isclose(j["x"], points[i][0], abs_tol=5) and math.isclose(j["y"], points[i][1], abs_tol=5):
-                distances.add(math.floor(total_length))
+                distances.append(math.floor(total_length))
         total_length += segment_length
-    
-    return sorted([{"distance": d} for d in distances], key=lambda j: j["distance"])
 
-def generate_ascii_street(length, junctions):
-    """Generate an ASCII representation of the street with junctions only."""
-    street_representation = [" "] * length
-    
-    for junction in junctions:
-        street_representation[junction["distance"]] = "^"
-    
-    return "".join(street_representation).rstrip()
+    return sorted(distances)
 
 @app.get("/streets")
 def get_street_list():
     """Retrieve a list of all street IDs."""
-    return {"streets": [street["id"] for street in city_data]}
+    return {"streets": [street["id"] for street in city_data["streets"]]}
 
 @app.get("/street/{street_id}")
 def get_street(street_id: int):
     """Retrieve street data by ID, including length and junctions."""
-    street = next((s for s in city_data if s["id"] == street_id), None)
+    street = next((s for s in city_data["streets"] if s["id"] == street_id), None)
     if not street:
         raise HTTPException(status_code=404, detail="Street not found")
     
@@ -83,9 +74,13 @@ def get_street(street_id: int):
     P2 = (geometry["end"]["x"], geometry["end"]["y"])
     
     length, points = bezier_length(P0, P1, P2)
-    junction_distances = find_junction_distances(street["junctions"], points)
+    junction_offsets = find_junction_offsets(street["junctions"], points)
     
-    return {"id": street_id, "length": length, "junctions": junction_distances}
+    return {"id": street_id, 
+            "length": length, 
+            "geometry": geometry,
+            "junctions": street["junctions"],
+            "junction_offsets": junction_offsets}
 
 @app.get("/street/{street_id}/ascii")
 def get_ascii_street(street_id: int):

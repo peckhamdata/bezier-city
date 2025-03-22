@@ -75,7 +75,7 @@ export class Game extends Scene
     }    
 
     update() {
-        const speed = 5; // Adjust scrolling speed
+        const speed = 10; // Adjust scrolling speed
         let moving = false; // Track if the player is moving
     
         if (this.cursors.left.isDown) {
@@ -90,7 +90,14 @@ export class Game extends Scene
             this.player.anims.play('walk-r', true); // ✅ Play right-walking animation
             moving = true;
         }
-    
+
+        if (this.player) {
+            const relativeX = this.player.x / this.scale.width;
+            const relativeY = this.player.y / this.scale.height;
+            
+            EventBus.emit("playerPosition", { x: relativeX, y: relativeY });
+        }
+
         // ✅ Pause animation when idle
         if (this.player && !moving) {
             this.player.anims.stop();

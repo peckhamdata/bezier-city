@@ -12,7 +12,7 @@ const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
     width: 1024,
     height: 768,
-    parent: 'game-container',
+    parent: 'GameContainer',
     backgroundColor: '#028af8',
     scene: [
         Boot,
@@ -39,8 +39,15 @@ const config: Phaser.Types.Core.GameConfig = {
 
 const StartGame = (parent: string) => {
 
-    return new Game({ ...config, parent });
-
+    let game = new Game({ ...config, parent })
+    // Global event handlers for visibility changes
+    game.events.on("hidden", () => {
+        game.scene.getScenes(true).forEach(scene => scene.scene.pause());
+    });
+    game.events.on("visible", () => {
+        game.scene.getScenes(true).forEach(scene => scene.scene.resume());
+    });
+    return game;    
 }
 
 export default StartGame;

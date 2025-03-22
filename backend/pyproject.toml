@@ -11,6 +11,7 @@ fastapi = "^0.115.11"
 uvicorn = "^0.34.0"
 pandas = "^2.2.3"
 ace-tools = "^0.0"
+shapely = "^2.0.7"
 
 
 [build-system]

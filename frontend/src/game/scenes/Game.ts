@@ -68,10 +68,11 @@ export class Game extends Scene
         });
         
         // ✅ Create player and play animation
-        this.player = this.physics.add.sprite(200, 0, 'figure-lr').setOrigin(0, 1);
-        this.player.setPosition(200, this.scale.height);
+        const startPosition = 200;
+        this.player = this.physics.add.sprite(startPosition, 0, 'figure-lr').setOrigin(0, 1);
+        this.player.setPosition(startPosition, this.scale.height);
         this.player.anims.play('walk-r');
-
+        this.cameras.main.scrollX += startPosition;
     }    
 
     update() {

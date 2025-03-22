@@ -34,6 +34,13 @@ type StreetCanvasProps = {
   playerPosition: PlayerPosition;
 };
 
+interface NPC {
+  name: string;
+  street_id: number;
+  x_position: number;
+  dialogue: string[];
+}
+
 function calculateWorldPosition(playerX: number, street: Street): Point {
   let t = playerX / street.length;
   t = Math.max(0, Math.min(1, t));
@@ -56,7 +63,16 @@ function calculateWorldPosition(playerX: number, street: Street): Point {
 const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [streets, setStreets] = useState<Street[]>([]);
+  const [npcs, setNpcs] = useState<NPC[]>([]);
 
+  // Fetch NPCs on mount
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/npcs`)
+      .then((res) => res.json())
+      .then(setNpcs)
+      .catch((err) => console.error("Error fetching NPCs:", err));
+  }, []);
+  
   // Fetch street data on mount
   useEffect(() => {
     fetch(`${API_BASE_URL}/streets`)
@@ -117,7 +133,6 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
     streets.forEach((street) => {
       const { start, control, end } = street.geometry;
 
-      if (street.id === 1) {
         // Draw curve
         ctx.beginPath();
         ctx.moveTo(start.x * scale + xOffset, start.y * scale + yOffset);
@@ -144,7 +159,6 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
           );
           ctx.fill();
         });
-      }
     });
 
     // Draw turquoise player dot
@@ -159,6 +173,26 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
     ctx.fillStyle = "turquoise";
     ctx.fill();
     ctx.closePath();
+
+    // Draw NPCs
+    ctx.fillStyle = "gold";
+    npcs.forEach((npc) => {
+      const street = streets.find((s) => s.id === npc.street_id);
+      if (!street) return;
+
+      const npcPos = calculateWorldPosition(npc.x_position, street);
+      ctx.beginPath();
+      ctx.arc(
+        npcPos.x * scale + xOffset,
+        npcPos.y * scale + yOffset,
+        5,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+      ctx.closePath();
+    });
+
   }, [streets, worldPosition]);
 
   return (

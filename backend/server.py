@@ -1,3 +1,6 @@
+from typing import List
+from bezier_city_backend.models.npc import NPC
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from bezier_city_backend.buildings import fill_street_with_buildings, render_street 
 import json
@@ -177,6 +180,30 @@ def get_building_asset(building_id: str, level: int):
 def get_all_buildings():
     return BUILDINGS
 
+########################################
+
+NPC_FILE = Path("bezier_city_backend/data/npc.json")
+
+def load_npcs() -> List[NPC]:
+    with NPC_FILE.open() as f:
+        data = json.load(f)
+        return [NPC(**npc) for npc in data]
+
+# Route: GET /npcs – get all NPCs
+@app.get("/npcs", response_model=List[NPC])
+def get_npcs():
+    return load_npcs()
+
+# Route: GET /npcs/{name} – get an NPC by name
+@app.get("/npc/{name}", response_model=NPC)
+def get_npc_by_name(name: str):
+    for npc in load_npcs():
+        if npc.name.lower() == name.lower():
+            return npc
+    raise HTTPException(status_code=404, detail=f"NPC '{name}' not found")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+

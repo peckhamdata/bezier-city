@@ -6,26 +6,8 @@ from bezier_city_backend.buildings import fill_street_with_buildings, render_str
 import json
 import math
 
-from fastapi.middleware.cors import CORSMiddleware
-
-origins = [
-    "http://localhost",
-    "http://localhost:8080",
-]
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
 # Load the city data from file
-with open("city_1_with_junctions.json", "r") as f:
+with open("bezier_city.json", "r") as f:
     city_data = json.load(f)
 
 def bezier_point(t, P0, P1, P2):
@@ -59,6 +41,51 @@ def find_junction_offsets(junctions, points):
 
     return sorted(distances)
 
+################################################################################
+
+import asyncio
+from contextlib import asynccontextmanager
+
+# 🌀 Lifespan context to handle startup/shutdown logic
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async def update_npc_positions():
+        while True:
+            for npc in npcs:
+                npc.x_position += npc.velocity
+                # TODO: Replace with real street lookup
+                street_length = 100
+                if npc.x_position > street_length or npc.x_position < 0:
+                    npc.velocity *= -1
+                    npc.x_position += npc.velocity
+            await asyncio.sleep(0.1)
+
+    task = asyncio.create_task(update_npc_positions())
+    yield
+    task.cancel()
+
+################################################################################
+
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI(lifespan=lifespan)
+
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+################################################################################
+# Routes
+
 @app.get("/streets")
 def get_street_list():
     """Retrieve a list of all street IDs."""
@@ -73,14 +100,19 @@ def get_street(street_id: int):
     
     geometry = street["geometry"]
     P0 = (geometry["start"]["x"], geometry["start"]["y"])
-    P1 = (geometry["control"]["x"], geometry["control"]["y"])
     P2 = (geometry["end"]["x"], geometry["end"]["y"])
     
-    length, points = bezier_length(P0, P1, P2)
-    junction_offsets = find_junction_offsets(street["junctions"], points)
-    
+    if street["type"] == "bezier":
+        P1 = (geometry["control"]["x"], geometry["control"]["y"])
+        length, points = bezier_length(P0, P1, P2)
+        junction_offsets = find_junction_offsets(street["junctions"], points)
+    else:
+        junction_offsets = []
+        length = math.dist(P0, P2)
+
     return {"id": street_id, 
             "length": length, 
+            "type": street["type"],
             "geometry": geometry,
             "junctions": street["junctions"],
             "junction_offsets": junction_offsets}
@@ -92,6 +124,8 @@ def get_ascii_street(street_id: int):
     filled_street = fill_street_with_buildings(street)
 
     return {"id": street_id, "ascii": render_street(street, filled_street)}
+
+################################################################################
 
 # Sample building data structure
 BUILDINGS = {
@@ -180,9 +214,11 @@ def get_building_asset(building_id: str, level: int):
 def get_all_buildings():
     return BUILDINGS
 
-########################################
+################################################################################
 
 NPC_FILE = Path("bezier_city_backend/data/npc.json")
+
+npcs: list[NPC] = []  # initialized on startup
 
 def load_npcs() -> List[NPC]:
     with NPC_FILE.open() as f:
@@ -192,18 +228,20 @@ def load_npcs() -> List[NPC]:
 # Route: GET /npcs – get all NPCs
 @app.get("/npcs", response_model=List[NPC])
 def get_npcs():
-    return load_npcs()
+    return npcs
 
 # Route: GET /npcs/{name} – get an NPC by name
 @app.get("/npc/{name}", response_model=NPC)
 def get_npc_by_name(name: str):
-    for npc in load_npcs():
+    for npc in npcs:
         if npc.name.lower() == name.lower():
             return npc
     raise HTTPException(status_code=404, detail=f"NPC '{name}' not found")
 
-
 if __name__ == "__main__":
+
+    npcs = load_npcs()
+
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
 

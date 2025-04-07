@@ -11,66 +11,76 @@ buildings = {
 def fill_street_with_buildings(street, buildings=buildings):
     """Fills the street with buildings while ensuring junctions occupy 1-width spaces."""
 
-    # Extract street length and junction positions
-    street_length = street["length"]
-    junction_positions = street["junction_offsets"]
+    return []
+#     # Extract street length and junction positions
+#     street_length = street["length"]
+#     junction_positions = street["junction_offsets"]
 
-    # Ensure junctions take up a width of 1
-    junction_width = 1
+#     # Ensure junctions take up a width of 1
+#     junction_width = 1
 
-    # List of placed elements (buildings and junctions)
-    placed_elements = []
+#     # List of placed elements (buildings and junctions)
+#     placed_elements = []
 
-    # Track position as we fill the street
-    current_position = 0
+#     # Track position as we fill the street
+#     current_position = 0
 
-    while current_position < street_length:
-        # If this position is a junction, place it and move forward
-        if current_position in junction_positions:
-            placed_elements.append({
-                "name": "Junction",
-                "ascii": "+",
-                "width": junction_width,
-                "position": current_position
-            })
-            current_position += junction_width  # Move past the junction
-            continue  # Ensure no building is placed on the junction
+#     while current_position < street_length:
+#         # If this position is a junction, place it and move forward
+#         if current_position in junction_positions:
+#             placed_elements.append({
+#                 "name": "Junction",
+#                 "ascii": "+",
+#                 "width": junction_width,
+#                 "position": current_position
+#             })
+#             current_position += junction_width  # Move past the junction
+#             continue  # Ensure no building is placed on the junction
 
-        # Find all buildings that can fit in the remaining space before next junction
-        next_junction = min((j for j in junction_positions if j > current_position), default=street_length)
-        available_space = next_junction - current_position
+#         # Find all buildings that can fit in the remaining space before next junction
+#         next_junction = min((j for j in junction_positions if j > current_position), default=street_length)
+#         available_space = next_junction - current_position
 
-        possible_buildings = [
-            name for name, data in buildings.items() if data["width"] <= available_space
-        ]
+#         possible_buildings = [
+#             name for name, data in buildings.items() if data["width"] <= available_space
+#         ]
 
-        if not possible_buildings:
-            current_position += 1  # Move forward if no building fits
-            continue
+#         if not possible_buildings:
+#             current_position += 1  # Move forward if no building fits
+#             continue
 
-        # Choose a random building that fits
-        building_name = random.choice(possible_buildings)
-        building_width = buildings[building_name]["width"]
+#         # Choose a random building that fits
+#         building_name = random.choice(possible_buildings)
+#         building_width = buildings[building_name]["width"]
 
-        # Place the building
-        placed_elements.append({
-            "name": building_name,
-            "ascii": buildings[building_name]["ascii"],
-            "width": building_width,
-            "position": current_position
-        })
+#         # Place the building
+#         placed_elements.append({
+#             "name": building_name,
+#             "ascii": buildings[building_name]["ascii"],
+#             "width": building_width,
+#             "position": current_position
+#         })
 
-        # Move position forward
-        current_position += building_width
+#         # Move position forward
+#         current_position += building_width
 
-    return placed_elements
+#     return placed_elements
 
 def render_street(street, placed_elements):
     """Creates a compact string representation of the street using single-character tokens for buildings."""
     
     street_representation = []  # List of characters for rendering
 
-    for element in placed_elements:
+    dummy_placed_elements = [
+        {"ascii": "A"},
+        {"ascii": "B"},
+        {"ascii": "C"},
+        {"ascii": "D"},
+        {"ascii": "E"},
+        {"ascii": "+"},
+    ]
+
+    for element in dummy_placed_elements:
         ascii_char = element["ascii"]
         street_representation.append(ascii_char)  # Append each building/junction as a single token
 

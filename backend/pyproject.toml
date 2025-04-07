@@ -13,6 +13,7 @@ pandas = "^2.2.3"
 ace-tools = "^0.0"
 shapely = "^2.0.7"
 pydantic = "^2.10.6"
+datamodel-code-generator = "^0.28.5"
 
 
 [build-system]

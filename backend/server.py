@@ -3,6 +3,7 @@ from bezier_city_backend.models.npc import NPC
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from bezier_city_backend.buildings import fill_street_with_buildings, render_street 
+from bezier_city_backend.models.city import CityModel, Block, Street, Edge, Cell, StreetSegmentsResponse, Segment, Point
 import json
 import math
 
@@ -82,40 +83,50 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+################################################################################
+
+# Load your city once at startup
+with open('bezier_city_full.json') as f:
+    city_data = json.load(f)
+
+
+city = CityModel(**city_data)
 
 ################################################################################
 # Routes
 
-@app.get("/streets")
-def get_street_list():
-    """Retrieve a list of all street IDs."""
-    return {"streets": [street["id"] for street in city_data["streets"]]}
+@app.get("/blocks", response_model=List[Block])
+async def get_blocks():
+    return city.blocks
 
-@app.get("/street/{street_id}")
-def get_street(street_id: int):
-    """Retrieve street data by ID, including length and junctions."""
-    street = next((s for s in city_data["streets"] if s["id"] == street_id), None)
-    if not street:
-        raise HTTPException(status_code=404, detail="Street not found")
-    
-    geometry = street["geometry"]
-    P0 = (geometry["start"]["x"], geometry["start"]["y"])
-    P2 = (geometry["end"]["x"], geometry["end"]["y"])
-    
-    if street["type"] == "bezier":
-        P1 = (geometry["control"]["x"], geometry["control"]["y"])
-        length, points = bezier_length(P0, P1, P2)
-        junction_offsets = find_junction_offsets(street["junctions"], points)
-    else:
-        junction_offsets = []
-        length = math.dist(P0, P2)
+@app.get("/blocks/{block_id}", response_model=Block)
+async def get_block(block_id: int):
+    for block in city.blocks:
+        if block.id == block_id:
+            return block
+    raise HTTPException(status_code=404, detail="Block not found")
 
-    return {"id": street_id, 
-            "length": length, 
-            "type": street["type"],
-            "geometry": geometry,
-            "junctions": street["junctions"],
-            "junction_offsets": junction_offsets}
+@app.get("/streets", response_model=List[StreetSegmentsResponse])
+async def get_streets():
+    response = []
+    for street in city.streets:
+        segments = street.to_segments(city.edges)  # <--- build segments from edges
+        response.append(StreetSegmentsResponse(id=street.id, segments=segments))
+    return response
+
+@app.get("/street/{street_id}", response_model=StreetSegmentsResponse)
+async def get_street(street_id: int):
+    for street in city.streets:
+        if street.id == street_id:
+            raw_segments = street.to_segments(city.edges)
+            segments = [
+                Segment(
+                    start=Point(x=seg["start"]["x"], y=seg["start"]["y"]),
+                    end=Point(x=seg["end"]["x"], y=seg["end"]["y"])
+                ) for seg in raw_segments
+            ]
+            return StreetSegmentsResponse(id=street.id, segments=segments)
+    raise HTTPException(status_code=404, detail="Street not found")
 
 @app.get("/street/{street_id}/ascii")
 def get_ascii_street(street_id: int):
@@ -124,6 +135,32 @@ def get_ascii_street(street_id: int):
     filled_street = fill_street_with_buildings(street)
 
     return {"id": street_id, "ascii": render_street(street, filled_street)}
+
+@app.get("/edges", response_model=List[Edge])
+async def get_edges():
+    return city.edges
+
+@app.get("/edges/{edge_id}", response_model=Edge)
+async def get_edge(edge_id: int):
+    for edge in city.edges:
+        if edge.id == edge_id:
+            return edge
+    raise HTTPException(status_code=404, detail="Edge not found")
+
+@app.get("/cells", response_model=List[Cell])
+async def get_cells():
+    cells = []
+    for block in city.blocks:
+        cells.extend(block.cells)
+    return cells
+
+@app.get("/cells/{cell_id}", response_model=Cell)
+async def get_cell(cell_id: int):
+    for block in city.blocks:
+        for cell in block.cells:
+            if cell.id == cell_id:
+                return cell
+    raise HTTPException(status_code=404, detail="Cell not found")
 
 ################################################################################
 

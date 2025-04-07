@@ -2,28 +2,28 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
+// ==== Types ====
+
 interface Point {
   x: number;
   y: number;
 }
 
-interface Geometry {
+interface Segment {
   start: Point;
-  control: Point;
   end: Point;
-}
-
-interface Junction {
-  x: number;
-  y: number;
 }
 
 interface Street {
   id: number;
-  length: number;
-  type: string
-  geometry: Geometry;
-  junctions: Junction[];
+  segments: Segment[];
+}
+
+interface NPC {
+  name: string;
+  street_id: number;
+  x_position: number;
+  dialogue: string[];
 }
 
 type PlayerPosition = {
@@ -35,87 +35,68 @@ type StreetCanvasProps = {
   playerPosition: PlayerPosition;
 };
 
-interface NPC {
-  name: string;
-  street_id: number;
-  x_position: number;
-  dialogue: string[];
-}
+// ==== Utility Function ====
 
-function calculateWorldPosition(playerX: number, street: Street): Point {
-  let t = playerX / street.length;
-  t = Math.max(0, Math.min(1, t));
+function calculateWorldPositionOnStreet(street: Street, distance: number): Point {
+  let remaining = distance;
+  for (const segment of street.segments) {
+    const dx = segment.end.x - segment.start.x;
+    const dy = segment.end.y - segment.start.y;
+    const segmentLength = Math.sqrt(dx * dx + dy * dy);
 
-  if (street.type === "bezier"){
-    const { start, control, end } = street.geometry;
+    if (remaining <= segmentLength) {
+      const ratio = remaining / segmentLength;
+      return {
+        x: segment.start.x + dx * ratio,
+        y: segment.start.y + dy * ratio,
+      };
+    }
 
-    const x =
-      (1 - t) * (1 - t) * start.x +
-      2 * (1 - t) * t * control.x +
-      t * t * end.x;
-  
-    const y =
-      (1 - t) * (1 - t) * start.y +
-      2 * (1 - t) * t * control.y +
-      t * t * end.y;
-  
-    return { x, y };
-  } else {
-    console.log("Unsupported street type", street.type, street.id);
-    return { x: 0, y: 0 };
+    remaining -= segmentLength;
   }
+
+  const lastSegment = street.segments[street.segments.length - 1];
+  return lastSegment.end;
 }
+
+// ==== Component ====
 
 const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [streets, setStreets] = useState<Street[]>([]);
   const [npcs, setNpcs] = useState<NPC[]>([]);
-  const [zoom, setZoom] = useState(1); // Default zoom multiplier
+  const [zoom, setZoom] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const panStateRef = useRef({
-    isDragging: false,
-    lastX: 0,
-    lastY: 0,
-  });
+  const panStateRef = useRef({ isDragging: false, lastX: 0, lastY: 0 });
 
+  // 🚀 Fetch streets ONCE on mount
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/streets`)
+      .then((response) => response.json())
+      .then((data: Street[]) => setStreets(data))
+      .catch(console.error);
+  }, []);
+
+  // 🚀 Poll NPCs separately every 200ms
   useEffect(() => {
     const interval = setInterval(() => {
       fetch(`${API_BASE_URL}/npcs`)
         .then((res) => res.json())
         .then(setNpcs)
         .catch(console.error);
-    }, 200); // 🔁 200ms is a good starting point
-  
+    }, 200);
+
     return () => clearInterval(interval);
   }, []);
-  
-  // Fetch street data on mount
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/streets`)
-      .then((response) => response.json())
-      .then((data: { streets: number[] }) => {
-        const streetIds = data.streets;
-        return Promise.all(
-          streetIds.map((id) =>
-            fetch(`${API_BASE_URL}/street/${id}`)
-              .then((response) => response.json())
-              .catch((error) => console.error(`Error fetching street ${id}:`, error))
-          )
-        );
-      })
-      .then((streetsData) => {
-        setStreets(streetsData.filter(Boolean));
-      })
-      .catch((error) => console.error("Error fetching street list:", error));
-  }, []);
 
-  // Memoize worldPosition to avoid loops
+  // 🚀 Calculate player world position
   const worldPosition = useMemo(() => {
-    if (!streets.length) return { x: 0, y: 0 };
-    return calculateWorldPosition(playerPosition.x, streets[1]); // Assuming street ID 1
+    const street = streets.find(s => s.id === 1); // Assume player is on street 1
+    if (!street) return { x: 0, y: 0 };
+    return calculateWorldPositionOnStreet(street, playerPosition.x);
   }, [playerPosition, streets]);
 
-  // Draw canvas when position or streets change
+  // 🚀 Draw scene
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !streets.length) return;
@@ -125,76 +106,40 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
     const width = canvas.width;
     const height = canvas.height;
 
-    // Find bounding box
+    // Bounding box
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    streets.forEach(({ type, geometry }) => {
-      if (type === "bezier") {
-        const { start, control, end } = geometry;
-        [start, control, end].forEach(({ x, y }) => {
+    streets.forEach(({ segments }) => {
+      segments.forEach(({ start, end }) => {
+        [start, end].forEach(({ x, y }) => {
           minX = Math.min(minX, x);
           minY = Math.min(minY, y);
           maxX = Math.max(maxX, x);
           maxY = Math.max(maxY, y);
         });
-      }
+      });
     });
 
     const bboxWidth = maxX - minX;
     const bboxHeight = maxY - minY;
-
     const scale = height / bboxHeight * 0.9 * zoom;
     const xOffset = (width - bboxWidth * scale) / 2 - minX * scale + panOffset.x;
     const yOffset = (height - bboxHeight * scale) / 2 - minY * scale + panOffset.y;
 
     ctx.clearRect(0, 0, width, height);
 
-    const bezierStreets = streets.filter(street => street.type === "bezier");
-    bezierStreets.forEach((street) => {
-      const { start, control, end } = street.geometry;
-
-        // Draw curve
-        ctx.beginPath();
-        ctx.moveTo(start.x * scale + xOffset, start.y * scale + yOffset);
-        ctx.quadraticCurveTo(
-          control.x * scale + xOffset,
-          control.y * scale + yOffset,
-          end.x * scale + xOffset,
-          end.y * scale + yOffset
-        );
-        ctx.strokeStyle = "cyan";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Draw junctions
-        ctx.fillStyle = "red";
-        street.junctions.forEach((junction) => {
-          ctx.beginPath();
-          ctx.arc(
-            junction.x * scale + xOffset,
-            junction.y * scale + yOffset,
-            1,
-            0,
-            Math.PI * 2
-          );
-          ctx.fill();
-        });
-    });
-
-    const bresenhamStreets = streets.filter(street => street.type === "bresenham");
-    bresenhamStreets.forEach((street) => {
-      const { start, end } = street.geometry;
-
-        // Draw curve
+    // Draw streets
+    ctx.strokeStyle = "cyan";
+    ctx.lineWidth = 2;
+    streets.forEach(({ segments }) => {
+      segments.forEach(({ start, end }) => {
         ctx.beginPath();
         ctx.moveTo(start.x * scale + xOffset, start.y * scale + yOffset);
         ctx.lineTo(end.x * scale + xOffset, end.y * scale + yOffset);
-        ctx.strokeStyle = "green";
-        ctx.lineWidth = 2;
         ctx.stroke();
+      });
     });
 
-
-    // Draw turquoise player dot
+    // Draw player
     ctx.beginPath();
     ctx.arc(
       worldPosition.x * scale + xOffset,
@@ -212,8 +157,8 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
     npcs.forEach((npc) => {
       const street = streets.find((s) => s.id === npc.street_id);
       if (!street) return;
+      const npcPos = calculateWorldPositionOnStreet(street, npc.x_position);
 
-      const npcPos = calculateWorldPosition(npc.x_position, street);
       ctx.beginPath();
       ctx.arc(
         npcPos.x * scale + xOffset,
@@ -226,45 +171,42 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
       ctx.closePath();
     });
 
-  }, [streets, worldPosition]);
+  }, [streets, worldPosition, npcs, zoom, panOffset]);
 
+  // 🚀 Pan handling
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-  
+
     const handleMouseDown = (e: MouseEvent) => {
       panStateRef.current.isDragging = true;
       panStateRef.current.lastX = e.clientX;
       panStateRef.current.lastY = e.clientY;
     };
-  
+
     const handleMouseMove = (e: MouseEvent) => {
       if (!panStateRef.current.isDragging) return;
-  
       const dx = e.clientX - panStateRef.current.lastX;
       const dy = e.clientY - panStateRef.current.lastY;
-  
       setPanOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
-  
       panStateRef.current.lastX = e.clientX;
       panStateRef.current.lastY = e.clientY;
     };
-  
+
     const handleMouseUp = () => {
       panStateRef.current.isDragging = false;
     };
-  
+
     canvas.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
-  
+
     return () => {
       canvas.removeEventListener("mousedown", handleMouseDown);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
   }, []);
-  
 
   return (
     <div>

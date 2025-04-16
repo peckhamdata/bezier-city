@@ -59,6 +59,8 @@ function App() {
             <div id="app" style={{ 
                 position: "relative", 
                 display: "inline-block", // Keeps everything properly aligned 
+                width: "1200px",   // 👈 Fix the width
+                height: "800px",   // 👈 Fix the height
             }}>
                 {/* Button now correctly positioned inside the same container */}
                 <button

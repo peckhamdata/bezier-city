@@ -3,44 +3,15 @@ from bezier_city_backend.models.npc import NPC
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from bezier_city_backend.buildings import fill_street_with_buildings, render_street 
-from bezier_city_backend.models.city import CityModel, Block, Street, Edge, Cell, StreetSegmentsResponse, Segment, Point
+from bezier_city_backend.models.city import CityModel, Block, Street, Edge, Cell, CellResponse, StreetSegmentsResponse, Segment, Point
 import json
 import math
+import sys
+import time
 
 # Load the city data from file
 with open("bezier_city.json", "r") as f:
     city_data = json.load(f)
-
-def bezier_point(t, P0, P1, P2):
-    """Calculate a point on a quadratic Bézier curve."""
-    return (
-        (1 - t) ** 2 * P0[0] + 2 * (1 - t) * t * P1[0] + t ** 2 * P2[0],
-        (1 - t) ** 2 * P0[1] + 2 * (1 - t) * t * P1[1] + t ** 2 * P2[1]
-    )
-
-def bezier_length(P0, P1, P2, num_samples=50):
-    """Approximates the length of a quadratic Bézier curve by sampling points."""
-    length = 0
-    points = [bezier_point(t, P0, P1, P2) for t in [i / num_samples for i in range(num_samples + 1)]]
-    
-    for i in range(len(points) - 1):
-        length += math.dist(points[i], points[i + 1])
-    
-    return math.floor(length), points
-
-def find_junction_offsets(junctions, points):
-    """Find the distance along the curve for each junction, removing duplicates."""
-    distances = []
-    total_length = 0
-    
-    for i in range(len(points) - 1):
-        segment_length = math.dist(points[i], points[i + 1])
-        for j in junctions:
-            if math.isclose(j["x"], points[i][0], abs_tol=5) and math.isclose(j["y"], points[i][1], abs_tol=5):
-                distances.append(math.floor(total_length))
-        total_length += segment_length
-
-    return sorted(distances)
 
 ################################################################################
 
@@ -52,13 +23,8 @@ from contextlib import asynccontextmanager
 async def lifespan(app: FastAPI):
     async def update_npc_positions():
         while True:
-            for npc in npcs:
-                npc.x_position += npc.velocity
-                # TODO: Replace with real street lookup
-                street_length = 100
-                if npc.x_position > street_length or npc.x_position < 0:
-                    npc.velocity *= -1
-                    npc.x_position += npc.velocity
+            for npc in NPC.npcs:
+                npc.update_position()
             await asyncio.sleep(0.1)
 
     task = asyncio.create_task(update_npc_positions())
@@ -147,19 +113,26 @@ async def get_edge(edge_id: int):
             return edge
     raise HTTPException(status_code=404, detail="Edge not found")
 
-@app.get("/cells", response_model=List[Cell])
+
+@app.get("/cells", response_model=List[CellResponse])
 async def get_cells():
     cells = []
     for block in city.blocks:
-        cells.extend(block.cells)
+        for cell_data in block.cells:
+            cell = CellResponse(
+                id=cell_data.id,
+                coords=[Point(x=pt[0], y=pt[1]) for pt in cell_data.coords]
+            )
+            cells.append(cell)
     return cells
 
-@app.get("/cells/{cell_id}", response_model=Cell)
+
+@app.get("/cells/{cell_id}", response_model=List[CellResponse])
 async def get_cell(cell_id: int):
     for block in city.blocks:
         for cell in block.cells:
             if cell.id == cell_id:
-                return cell
+                return cell.to_points()
     raise HTTPException(status_code=404, detail="Cell not found")
 
 ################################################################################
@@ -275,10 +248,35 @@ def get_npc_by_name(name: str):
             return npc
     raise HTTPException(status_code=404, detail=f"NPC '{name}' not found")
 
+def format_position(pos: list[float]) -> str:
+    return f"({pos[0]:.1f}, {pos[1]:.1f})"
+
+def run_simulation(npcs: list[NPC], city: CityModel, steps: int = 100, delta_time: float = 0.1):
+    for _ in range(steps):
+        for npc in npcs:
+            npc.update(delta_time, city)
+
+        # Build output line
+        line = ' | '.join(
+            f"NPC {npc.id}: edge {npc.current_edge_id} @ {format_position(npc.get_position(city))}:{npc.progress}"
+            for npc in npcs
+        )
+
+        # Print on same line
+        print(f"\r{line}", end='')
+        sys.stdout.flush()
+
+        time.sleep(delta_time)
+
+    print()  # newline at the end
+
 if __name__ == "__main__":
 
     npcs = load_npcs()
 
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-
+    run_simulation(npcs, city, steps=1000, delta_time=0.1)
+ 
+    # import uvicorn
+    # uvicorn.run(app, host="0.0.0.0", port=8000)
+    import pdb; pdb.set_trace()
+    pass

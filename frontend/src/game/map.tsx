@@ -19,6 +19,11 @@ interface Street {
   segments: Segment[];
 }
 
+interface Cell {
+  id: number;
+  coords: Point[];
+}
+
 interface NPC {
   name: string;
   street_id: number;
@@ -35,7 +40,7 @@ type StreetCanvasProps = {
   playerPosition: PlayerPosition;
 };
 
-// ==== Utility Function ====
+// ==== Utility Functions ====
 
 function calculateWorldPositionOnStreet(street: Street, distance: number): Point {
   let remaining = distance;
@@ -59,25 +64,41 @@ function calculateWorldPositionOnStreet(street: Street, distance: number): Point
   return lastSegment.end;
 }
 
+function randomNeonColor() {
+  const colors = ['#39FF14', '#FF073A', '#0FF0FC', '#F800FF', '#FE019A', '#FC6C85', '#DFFF00', '#FF5F1F', '#08F7FE', '#B10DC9'];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
 // ==== Component ====
 
 const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const staticCanvasRef = useRef<HTMLCanvasElement>(null);
+  const dynamicCanvasRef = useRef<HTMLCanvasElement>(null);
+
   const [streets, setStreets] = useState<Street[]>([]);
+  const [cells, setCells] = useState<Cell[]>([]);         // <== new state
   const [npcs, setNpcs] = useState<NPC[]>([]);
   const [zoom, setZoom] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const panStateRef = useRef({ isDragging: false, lastX: 0, lastY: 0 });
 
-  // 🚀 Fetch streets ONCE on mount
+  // === Fetch streets once ===
   useEffect(() => {
     fetch(`${API_BASE_URL}/streets`)
-      .then((response) => response.json())
+      .then((res) => res.json())
       .then((data: Street[]) => setStreets(data))
       .catch(console.error);
   }, []);
 
-  // 🚀 Poll NPCs separately every 200ms
+  // === Fetch cells once ===
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/cells`)
+      .then((res) => res.json())
+      .then((data: Cell[]) => setCells(data))
+      .catch(console.error);
+  }, []);
+
+  // === Poll NPCs separately every 200ms ===
   useEffect(() => {
     const interval = setInterval(() => {
       fetch(`${API_BASE_URL}/npcs`)
@@ -89,24 +110,23 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
     return () => clearInterval(interval);
   }, []);
 
-  // 🚀 Calculate player world position
+  // === Calculate world position of player ===
   const worldPosition = useMemo(() => {
-    const street = streets.find(s => s.id === 1); // Assume player is on street 1
+    const street = streets.find(s => s.id === 1); // Assume street 1
     if (!street) return { x: 0, y: 0 };
     return calculateWorldPositionOnStreet(street, playerPosition.x);
   }, [playerPosition, streets]);
 
-  // 🚀 Draw scene
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !streets.length) return;
+    const canvas = staticCanvasRef.current;
+    if (!canvas || !streets.length || !cells.length) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
+  
     const width = canvas.width;
     const height = canvas.height;
-
-    // Bounding box
+  
+    // Compute bounding box
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     streets.forEach(({ segments }) => {
       segments.forEach(({ start, end }) => {
@@ -118,16 +138,31 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
         });
       });
     });
-
+  
     const bboxWidth = maxX - minX;
     const bboxHeight = maxY - minY;
     const scale = height / bboxHeight * 0.9 * zoom;
     const xOffset = (width - bboxWidth * scale) / 2 - minX * scale + panOffset.x;
     const yOffset = (height - bboxHeight * scale) / 2 - minY * scale + panOffset.y;
-
+  
     ctx.clearRect(0, 0, width, height);
-
-    // Draw streets
+  
+    // Draw Cells
+    ctx.lineWidth = 1;
+    cells.forEach((cell) => {
+      ctx.strokeStyle = randomNeonColor();
+      ctx.beginPath();
+      cell.coords.forEach((point, index) => {
+        const x = point.x * scale + xOffset;
+        const y = point.y * scale + yOffset;
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.closePath();
+      ctx.stroke();
+    });
+  
+    // Draw Streets
     ctx.strokeStyle = "cyan";
     ctx.lineWidth = 2;
     streets.forEach(({ segments }) => {
@@ -138,8 +173,45 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
         ctx.stroke();
       });
     });
+  
+  }, [streets, cells, zoom, panOffset]);
 
+  useEffect(() => {
+    const canvas = dynamicCanvasRef.current;
+    if (!canvas || !streets.length) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+  
+    const width = canvas.width;
+    const height = canvas.height;
+  
+    // Same bbox math
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    streets.forEach(({ segments }) => {
+      segments.forEach(({ start, end }) => {
+        [start, end].forEach(({ x, y }) => {
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        });
+      });
+    });
+  
+    const bboxWidth = maxX - minX;
+    const bboxHeight = maxY - minY;
+    const scale = height / bboxHeight * 0.9 * zoom;
+    const xOffset = (width - bboxWidth * scale) / 2 - minX * scale + panOffset.x;
+    const yOffset = (height - bboxHeight * scale) / 2 - minY * scale + panOffset.y;
+  
+    ctx.clearRect(0, 0, width, height);
+  
     // Draw player
+    const worldPosition = calculateWorldPositionOnStreet(
+      streets.find((s) => s.id === 1)!,
+      playerPosition.x
+    );
+  
     ctx.beginPath();
     ctx.arc(
       worldPosition.x * scale + xOffset,
@@ -151,14 +223,14 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
     ctx.fillStyle = "turquoise";
     ctx.fill();
     ctx.closePath();
-
+  
     // Draw NPCs
     ctx.fillStyle = "gold";
     npcs.forEach((npc) => {
       const street = streets.find((s) => s.id === npc.street_id);
       if (!street) return;
       const npcPos = calculateWorldPositionOnStreet(street, npc.x_position);
-
+  
       ctx.beginPath();
       ctx.arc(
         npcPos.x * scale + xOffset,
@@ -170,12 +242,13 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
       ctx.fill();
       ctx.closePath();
     });
+  
+  }, [playerPosition, npcs, streets, zoom, panOffset]);
+  
 
-  }, [streets, worldPosition, npcs, zoom, panOffset]);
-
-  // 🚀 Pan handling
+  // === Pan handling ===
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const canvas = staticCanvasRef.current;
     if (!canvas) return;
 
     const handleMouseDown = (e: MouseEvent) => {
@@ -228,12 +301,39 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
           />
         </label>
       </div>
-      <canvas
-        ref={canvasRef}
-        width={1200}
-        height={800}
-        style={{ border: "1px solid white", background: "black" }}
-      />
+      <div style={{
+        position: "relative",
+        width: "1200px",
+        height: "800px",
+        }}>
+        <canvas
+          ref={staticCanvasRef}
+          width={1200}
+          height={800}
+          style={{
+            border: "1px solid white",
+            background: "black",
+            position: "absolute",
+            left: 0,
+            top: 0,
+            zIndex: 0,  // <-- Behind
+          }}
+        />
+        <canvas
+          ref={dynamicCanvasRef}
+          width={1200}
+          height={800}
+          style={{
+            border: "1px solid white",
+            background: "transparent",
+            position: "absolute",
+            left: 0,
+            top: 0,
+            zIndex: 1,  // <-- On top
+            pointerEvents: "none",  // <-- Mouse passes through
+          }}
+        />
+    </div>
     </div>
   );
 };

@@ -1,0 +1,5 @@
+ dialog_lines = [
+        ["The glyphs hum when you listen closely."],
+        ["You’re not from around here, are you?"],
+        ["The city forgets—but I remember."]
+    ]

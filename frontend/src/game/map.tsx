@@ -25,10 +25,19 @@ interface Cell {
 }
 
 interface NPC {
+  id: number;
   name: string;
-  street_id: number;
-  x_position: number;
+  current_edge_id: number;
+  progress: number;
+  speed: number;
   dialogue: string[];
+}
+
+interface Edge {
+  id: number;
+  geometry: number[][];
+  street_id: number;
+  junction_ids: number[];
 }
 
 type PlayerPosition = {
@@ -64,6 +73,20 @@ function calculateWorldPositionOnStreet(street: Street, distance: number): Point
   return lastSegment.end;
 }
 
+function calculateWorldPositionOnEdge(edge: Edge, progress: number): Point {
+  const geometry = edge.geometry;
+  if (geometry.length < 2) return { x: 0, y: 0 };
+  
+  // Progress is 0-1, interpolate between start and end of edge
+  const start = geometry[0];
+  const end = geometry[geometry.length - 1];
+  
+  return {
+    x: start[0] + (end[0] - start[0]) * progress,
+    y: start[1] + (end[1] - start[1]) * progress
+  };
+}
+
 function randomNeonColor() {
   const colors = ['#39FF14', '#FF073A', '#0FF0FC', '#F800FF', '#FE019A', '#FC6C85', '#DFFF00', '#FF5F1F', '#08F7FE', '#B10DC9'];
   return colors[Math.floor(Math.random() * colors.length)];
@@ -79,6 +102,7 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   const [streets, setStreets] = useState<Street[]>([]);
   const [cells, setCells] = useState<Cell[]>([]);         // <== new state
   const [npcs, setNpcs] = useState<NPC[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
   const [zoom, setZoom] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const panStateRef = useRef({ isDragging: false, lastX: 0, lastY: 0 });
@@ -115,6 +139,14 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
     fetch(`${API_BASE_URL}/cells`)
       .then((res) => res.json())
       .then((data: Cell[]) => setCells(data))
+      .catch(console.error);
+  }, []);
+
+  // === Fetch edges once ===
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/edges`)
+      .then((res) => res.json())
+      .then((data: Edge[]) => setEdges(data))
       .catch(console.error);
   }, []);
 
@@ -205,7 +237,7 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   useEffect(() => {
 
     const canvas = dynamicCanvasRef.current;
-    if (!canvas || !streets.length) return;
+    if (!canvas || !streets.length || !edges.length) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
   
@@ -260,24 +292,35 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
     // Draw NPCs
     ctx.fillStyle = "gold";
     npcs.forEach((npc) => {
-      console.log(npc)
-      const street = streets.find((s) => s.id === npc.street_id);
-      if (!street) return;
-      const npcPos = calculateWorldPositionOnStreet(street, npc.x_position);
-      console.log(npcPos)
+      const edge = edges.find((e) => e.id === npc.current_edge_id);
+      if (!edge) return;
+      
+      const npcPos = calculateWorldPositionOnEdge(edge, npc.progress);
+      
       ctx.beginPath();
       ctx.arc(
         npcPos.x * scale + xOffset,
         npcPos.y * scale + yOffset,
-        5,
+        6,
         0,
         Math.PI * 2
       );
       ctx.fill();
       ctx.closePath();
+      
+      // Draw NPC name
+      ctx.fillStyle = "white";
+      ctx.font = "12px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(
+        npc.name,
+        npcPos.x * scale + xOffset,
+        npcPos.y * scale + yOffset - 10
+      );
+      ctx.fillStyle = "gold"; // Reset color for next NPC
     });
   
-  }, [playerPosition, npcs, streets, zoom, panOffset]);
+  }, [playerPosition, npcs, streets, edges, zoom, panOffset]);
   
 
   // === Pan and Zoom handling ===

@@ -36,8 +36,8 @@ async def lifespan(app: FastAPI):
     
     async def update_npc_positions():
         while True:
-            for npc in NPC.npcs:
-                npc.update_position()
+            for npc in npcs:
+                npc.update(0.1, city)  # 0.1 second delta time
             await asyncio.sleep(0.1)
 
     task = asyncio.create_task(update_npc_positions())

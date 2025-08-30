@@ -54,28 +54,40 @@ function App() {
     };
 
     return (
-        <div style={{ textAlign: "center", marginTop: "50px" }}>
-            {/* Outer container to ensure proper alignment */}
-            <div id="app" style={{ 
-                position: "relative", 
-                display: "inline-block", // Keeps everything properly aligned 
-                width: "1200px",   // 👈 Fix the width
-                height: "800px",   // 👈 Fix the height
+        <div style={{ 
+            display: "flex",
+            flexDirection: "column",
+            width: "100vw",
+            height: "100vh",
+            margin: 0,
+            padding: 0,
+            overflow: "hidden"
+        }}>
+            {/* Toggle button above the game/map area */}
+            <div style={{
+                display: "flex",
+                justifyContent: "center",
+                padding: "10px",
+                backgroundColor: "#000000"
             }}>
-                {/* Button now correctly positioned inside the same container */}
                 <button
                     onClick={toggleView}
+                    className="button"
                     style={{
-                        position: "absolute",
-                        top: 10,
-                        left: 10,
-                        zIndex: 2, // Ensures button stays on top
-                        padding: "10px 20px",
+                        margin: 0
                     }}
                 >
                     {showGame ? "Show Map" : "Show Game"}
                 </button>
+            </div>
 
+            {/* Game/Map container that fills remaining space */}
+            <div id="app" style={{ 
+                position: "relative",
+                flex: 1,
+                width: "100%",
+                overflow: "hidden"
+            }}>
                 {/* Game Div - Stacked on top */}
                 <div
                     id="gameContainer"

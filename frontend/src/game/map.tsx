@@ -74,6 +74,7 @@ function randomNeonColor() {
 const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   const staticCanvasRef = useRef<HTMLCanvasElement>(null);
   const dynamicCanvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const [streets, setStreets] = useState<Street[]>([]);
   const [cells, setCells] = useState<Cell[]>([]);         // <== new state
@@ -81,6 +82,24 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   const [zoom, setZoom] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const panStateRef = useRef({ isDragging: false, lastX: 0, lastY: 0 });
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+
+  // === Handle container resize ===
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        // Use offsetWidth/Height to get the actual content size
+        setCanvasSize({ 
+          width: containerRef.current.offsetWidth, 
+          height: containerRef.current.offsetHeight 
+        });
+      }
+    };
+
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
 
   // === Fetch streets once ===
   useEffect(() => {
@@ -177,6 +196,7 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   }, [streets, cells, zoom, panOffset]);
 
   useEffect(() => {
+
     const canvas = dynamicCanvasRef.current;
     if (!canvas || !streets.length) return;
     const ctx = canvas.getContext("2d");
@@ -223,14 +243,15 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
     ctx.fillStyle = "turquoise";
     ctx.fill();
     ctx.closePath();
-  
+
     // Draw NPCs
     ctx.fillStyle = "gold";
     npcs.forEach((npc) => {
+      console.log(npc)
       const street = streets.find((s) => s.id === npc.street_id);
       if (!street) return;
       const npcPos = calculateWorldPositionOnStreet(street, npc.x_position);
-  
+      console.log(npcPos)
       ctx.beginPath();
       ctx.arc(
         npcPos.x * scale + xOffset,
@@ -282,14 +303,27 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   }, []);
 
   return (
-    <div>
-      <p>
+    <div style={{ 
+      display: "flex", 
+      flexDirection: "column", 
+      height: "100%",
+      width: "100%",
+      overflow: "hidden"
+    }}>
+      <p style={{ 
+        margin: "10px",
+        flexShrink: 0
+      }}>
         Player scene X: {playerPosition.x.toFixed(2)} — World X: {worldPosition.x.toFixed(2)}, Y:{" "}
         {worldPosition.y.toFixed(2)}
       </p>
-      <div style={{ marginBottom: "10px" }}>
-        <label>
-          Zoom: {zoom.toFixed(2)}x
+      <div style={{ 
+        marginBottom: "10px", 
+        marginLeft: "10px",
+        flexShrink: 0
+      }}>
+        <label style={{ display: "flex", alignItems: "center", width: "300px" }}>
+          <span>Zoom: {zoom.toFixed(2)}x</span>
           <input
             type="range"
             min="1"
@@ -297,38 +331,48 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
             step="0.1"
             value={zoom}
             onChange={(e) => setZoom(parseFloat(e.target.value))}
-            style={{ marginLeft: "10px", verticalAlign: "middle" }}
+            style={{ 
+              marginLeft: "10px", 
+              flex: 1
+            }}
           />
         </label>
       </div>
-      <div style={{
+      <div ref={containerRef} style={{
         position: "relative",
-        width: "1200px",
-        height: "800px",
+        width: "100%",
+        flex: 1,
+        overflow: "hidden"
         }}>
         <canvas
           ref={staticCanvasRef}
-          width={1200}
-          height={800}
+          width={canvasSize.width}
+          height={canvasSize.height}
           style={{
             border: "1px solid white",
             background: "black",
             position: "absolute",
             left: 0,
             top: 0,
+            width: "100%",
+            height: "100%",
+            boxSizing: "border-box",
             zIndex: 0,  // <-- Behind
           }}
         />
         <canvas
           ref={dynamicCanvasRef}
-          width={1200}
-          height={800}
+          width={canvasSize.width}
+          height={canvasSize.height}
           style={{
             border: "1px solid white",
             background: "transparent",
             position: "absolute",
             left: 0,
             top: 0,
+            width: "100%",
+            height: "100%",
+            boxSizing: "border-box",
             zIndex: 1,  // <-- On top
             pointerEvents: "none",  // <-- Mouse passes through
           }}

@@ -25,22 +25,13 @@ of today.
 There are a whole load of games from which I take inspiration but Ocean's 'Frankie Goes to Hollywood' and
 Nintendo's 'Animal Crossing' are key.
 
-You can see the current state of the game at [beziercity.com](https://www.beziercity.com/).
-
 # Where I'm at with it.
 
-I'd got as far as rendering buildings using PETSCII characters as you can see in the above link.
-These are made using the code in [bc-gfx](https://github.com/peckhamdata/bc-gfx).
+The city is built programatically in the [bc-karte](https://github.com/peckhamdata/bc-karte) project.
 
-These buildings were on a single street. Then I thought 'Where is this street' and went off to build
-the map of the city which you can find in the [bc-map](https://github.com/peckhamdata/bc-map) repo.
+It is then turned into Pydantic models and served using FastAPI to the Phaser 3/React frontend.
 
-Next step is to join the map and the code here together so you can wander the streets of the city.
-
-It occured to me today that it might be nice if you encountered characters from or related to existing
-video games. Danger here is it becomes a bit Wreck it Ralph. No bad thing but I can imagine there are rights
-issues to negotiate :-)
-
+There are two views in the front end, the map showing streets and the position of the character and NPCs in the city, and the side scrolling street level view.
 
 # Copyright
 

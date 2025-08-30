@@ -18,9 +18,22 @@ with open("bezier_city.json", "r") as f:
 import asyncio
 from contextlib import asynccontextmanager
 
+# NPC setup
+NPC_FILE = Path("bezier_city_backend/data/npc.json")
+npcs: List[NPC] = []  # initialized on startup
+
+def load_npcs() -> List[NPC]:
+    with NPC_FILE.open() as f:
+        data = json.load(f)
+        return [NPC(**npc) for npc in data]
+
 # 🌀 Lifespan context to handle startup/shutdown logic
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Load NPCs on startup
+    global npcs
+    npcs = load_npcs()
+    
     async def update_npc_positions():
         while True:
             for npc in NPC.npcs:
@@ -226,15 +239,6 @@ def get_all_buildings():
 
 ################################################################################
 
-NPC_FILE = Path("bezier_city_backend/data/npc.json")
-
-npcs: list[NPC] = []  # initialized on startup
-
-def load_npcs() -> List[NPC]:
-    with NPC_FILE.open() as f:
-        data = json.load(f)
-        return [NPC(**npc) for npc in data]
-
 # Route: GET /npcs – get all NPCs
 @app.get("/npcs", response_model=List[NPC])
 def get_npcs():
@@ -274,9 +278,9 @@ if __name__ == "__main__":
 
     npcs = load_npcs()
 
-    run_simulation(npcs, city, steps=1000, delta_time=0.1)
+    # run_simulation(npcs, city, steps=1000, delta_time=0.1)
  
-    # import uvicorn
-    # uvicorn.run(app, host="0.0.0.0", port=8000)
-    import pdb; pdb.set_trace()
-    pass
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # import pdb; pdb.set_trace()
+    # pass

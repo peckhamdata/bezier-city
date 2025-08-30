@@ -30,6 +30,7 @@ interface NPC {
   current_edge_id: number;
   progress: number;
   speed: number;
+  direction: number;
   dialogue: string[];
 }
 

@@ -1,5 +1,6 @@
 from typing import List
 from bezier_city_backend.models.npc import NPC
+from bezier_city_backend.models.player import Player
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from bezier_city_backend.buildings import fill_street_with_buildings, render_street 
@@ -27,12 +28,26 @@ def load_npcs() -> List[NPC]:
         data = json.load(f)
         return [NPC(**npc) for npc in data]
 
+# Player setup
+PLAYER_FILE = Path("player_data.json")
+player: Player = None  # initialized on startup
+
+def load_player() -> Player:
+    with PLAYER_FILE.open() as f:
+        data = json.load(f)
+        return Player(**data)
+
+def save_player(player_data: Player):
+    with PLAYER_FILE.open('w') as f:
+        json.dump(player_data.dict(), f, indent=2)
+
 # 🌀 Lifespan context to handle startup/shutdown logic
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Load NPCs on startup
-    global npcs
+    # Load NPCs and player on startup
+    global npcs, player
     npcs = load_npcs()
+    player = load_player()
     
     async def update_npc_positions():
         while True:
@@ -251,6 +266,41 @@ def get_npc_by_name(name: str):
         if npc.name.lower() == name.lower():
             return npc
     raise HTTPException(status_code=404, detail=f"NPC '{name}' not found")
+
+################################################################################
+
+# Route: GET /player – get player data
+@app.get("/player", response_model=Player)
+def get_player():
+    return player
+
+# Route: POST /player – update player data
+@app.post("/player", response_model=Player)
+def update_player(player_data: Player):
+    global player
+    player = player_data
+    save_player(player_data)
+    return player
+
+# Route: POST /player/move – move player by distance
+@app.post("/player/move")
+def move_player(distance: float):
+    global player
+    player.move(distance, city)
+    save_player(player)
+    return {"success": True, "player": player}
+
+# Route: GET /player/position – get player world position
+@app.get("/player/position")
+def get_player_position():
+    position = player.get_position(city)
+    street_id = player.get_street_id(city)
+    return {
+        "position": position,
+        "street_id": street_id,
+        "current_edge_id": player.current_edge_id,
+        "progress": player.progress
+    }
 
 def format_position(pos: list[float]) -> str:
     return f"({pos[0]:.1f}, {pos[1]:.1f})"

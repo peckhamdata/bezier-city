@@ -14,6 +14,7 @@ class NPC(BaseModel):
     current_edge_id: int
     progress: float  # 0.0 = start, 1.0 = end
     speed: float  # units per second (how fast they walk)
+    direction: int = 1  # 1 = forward (0->1), -1 = backward (1->0)
 
     dialogue: List[str] = Field(default_factory=list)
 
@@ -22,23 +23,46 @@ class NPC(BaseModel):
         start, end = edge.geometry
         edge_length = distance(start, end)
 
-        self.progress += (self.speed * delta_time) / edge_length
+        # Move based on direction
+        progress_delta = (self.speed * delta_time * self.direction) / edge_length
+        self.progress += progress_delta
 
-        if self.progress >= 1.0:
-            # Arrived at junction
-            next_junction_id = edge.junction_ids[1]  # assume direction for now
-            junction = city.get_junction(next_junction_id)
+        # Check if we've reached a junction
+        if self.progress >= 1.0 or self.progress <= 0.0:
+            # Determine which junction we've reached
+            if self.progress >= 1.0:
+                current_junction_id = edge.junction_ids[1]
+                self.progress = 1.0
+            else:  # progress <= 0.0
+                current_junction_id = edge.junction_ids[0]
+                self.progress = 0.0
+                
+            junction = city.get_junction(current_junction_id)
 
             # Avoid going back the same edge
             possible_edges = [eid for eid in junction.edge_ids if eid != self.current_edge_id]
 
             if not possible_edges:
-                self.progress = 0.0  # turn around?
+                # Turn around on the same edge
+                self.direction *= -1
                 return
 
+            # Pick a new edge
             next_edge_id = random.choice(possible_edges)
+            next_edge = city.get_edge(next_edge_id)
+            
+            # Determine which end of the new edge connects to current junction
+            # and set initial progress and direction accordingly
+            if next_edge.junction_ids[0] == current_junction_id:
+                # Start from junction_ids[0], move toward junction_ids[1]
+                self.progress = 0.0
+                self.direction = 1
+            else:
+                # Start from junction_ids[1], move toward junction_ids[0]
+                self.progress = 1.0
+                self.direction = -1
+                
             self.current_edge_id = next_edge_id
-            self.progress = 0.0
 
     def get_position(self, city: CityModel) -> List[float]:
         edge = city.get_edge(self.current_edge_id)

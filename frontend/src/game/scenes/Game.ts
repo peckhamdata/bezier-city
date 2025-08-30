@@ -10,19 +10,31 @@ export class Game extends Scene
     startStreetId: number;
     streetBuildings: GameObjects.Image[] = [];
     player: Phaser.Physics.Arcade.Sprite;
+    playerData: any;
 
     constructor ()
     {
         super('Game');
 
-        this.apiBaseUrl = 'http://localhost:8000'; 
-        this.startStreetId = 1;         
+        this.apiBaseUrl = 'http://localhost:8000';
     }
 
-    async getStreet() {
-        const response = await fetch(`${this.apiBaseUrl}/street/${this.startStreetId}/ascii`);
+    async getPlayerData() {
+        const response = await fetch(`${this.apiBaseUrl}/player`);
         const data = await response.json();
-        return data.ascii
+        return data;
+    }
+
+    async getPlayerPosition() {
+        const response = await fetch(`${this.apiBaseUrl}/player/position`);
+        const data = await response.json();
+        return data;
+    }
+
+    async getStreet(streetId: number) {
+        const response = await fetch(`${this.apiBaseUrl}/street/${streetId}/ascii`);
+        const data = await response.json();
+        return data.ascii;
     }
 
     preload() {
@@ -36,7 +48,12 @@ export class Game extends Scene
     }    
 
     async create() {
-        const street = await this.getStreet();
+        // Load player data to get current street
+        this.playerData = await this.getPlayerData();
+        const playerPosition = await this.getPlayerPosition();
+        const playerStreetId = playerPosition.street_id || 1; // fallback to street 1
+        
+        const street = await this.getStreet(playerStreetId);
         let x:number = 0;
         for (const char of street) {
             const building = this.add.image(x, 0, char).setOrigin(0);

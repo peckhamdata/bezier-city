@@ -83,6 +83,7 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const panStateRef = useRef({ isDragging: false, lastX: 0, lastY: 0 });
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+  const [mapBounds, setMapBounds] = useState<{ minX: number; minY: number; maxX: number; maxY: number } | null>(null);
 
   // === Handle container resize ===
   useEffect(() => {
@@ -160,6 +161,12 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   
     const bboxWidth = maxX - minX;
     const bboxHeight = maxY - minY;
+    
+    // Save bounds if not already saved
+    if (!mapBounds) {
+      setMapBounds({ minX, minY, maxX, maxY });
+    }
+    
     const scale = height / bboxHeight * 0.9 * zoom;
     const xOffset = (width - bboxWidth * scale) / 2 - minX * scale + panOffset.x;
     const yOffset = (height - bboxHeight * scale) / 2 - minY * scale + panOffset.y;
@@ -220,6 +227,12 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   
     const bboxWidth = maxX - minX;
     const bboxHeight = maxY - minY;
+    
+    // Save bounds if not already saved
+    if (!mapBounds) {
+      setMapBounds({ minX, minY, maxX, maxY });
+    }
+    
     const scale = height / bboxHeight * 0.9 * zoom;
     const xOffset = (width - bboxWidth * scale) / 2 - minX * scale + panOffset.x;
     const yOffset = (height - bboxHeight * scale) / 2 - minY * scale + panOffset.y;
@@ -267,7 +280,7 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   }, [playerPosition, npcs, streets, zoom, panOffset]);
   
 
-  // === Pan handling ===
+  // === Pan and Zoom handling ===
   useEffect(() => {
     const canvas = staticCanvasRef.current;
     if (!canvas) return;
@@ -291,14 +304,61 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
       panStateRef.current.isDragging = false;
     };
 
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      // Zoom factor (negative deltaY = zoom in, positive = zoom out)
+      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+      
+      setZoom(prevZoom => {
+        const newZoom = Math.max(1, Math.min(100, prevZoom * zoomFactor));
+        
+        if (mapBounds) {
+          const width = canvas.width;
+          const height = canvas.height;
+          
+          // Calculate current and new scales
+          const bboxHeight = mapBounds.maxY - mapBounds.minY;
+          const bboxWidth = mapBounds.maxX - mapBounds.minX;
+          const oldScale = height / bboxHeight * 0.9 * prevZoom;
+          const newScale = height / bboxHeight * 0.9 * newZoom;
+          
+          // Get current pan offset
+          setPanOffset(prev => {
+            // Calculate world coordinates at mouse position with current zoom
+            const oldXOffset = (width - bboxWidth * oldScale) / 2 - mapBounds.minX * oldScale + prev.x;
+            const oldYOffset = (height - bboxHeight * oldScale) / 2 - mapBounds.minY * oldScale + prev.y;
+            const worldX = (mouseX - oldXOffset) / oldScale;
+            const worldY = (mouseY - oldYOffset) / oldScale;
+            
+            // Calculate new pan offset to keep the same world point at mouse position
+            const newXOffset = (width - bboxWidth * newScale) / 2 - mapBounds.minX * newScale;
+            const newYOffset = (height - bboxHeight * newScale) / 2 - mapBounds.minY * newScale;
+            
+            return {
+              x: mouseX - worldX * newScale - newXOffset,
+              y: mouseY - worldY * newScale - newYOffset
+            };
+          });
+        }
+        
+        return newZoom;
+      });
+    };
+
     canvas.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
+    canvas.addEventListener("wheel", handleWheel);
 
     return () => {
       canvas.removeEventListener("mousedown", handleMouseDown);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      canvas.removeEventListener("wheel", handleWheel);
     };
   }, []);
 
@@ -330,7 +390,39 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
             max="100"
             step="0.1"
             value={zoom}
-            onChange={(e) => setZoom(parseFloat(e.target.value))}
+            onChange={(e) => {
+              const newZoom = parseFloat(e.target.value);
+              
+              if (containerRef.current && mapBounds) {
+                const width = containerRef.current.offsetWidth;
+                const height = containerRef.current.offsetHeight;
+                const centerX = width / 2;
+                const centerY = height / 2;
+                
+                // Calculate current scale and offsets
+                const bboxHeight = mapBounds.maxY - mapBounds.minY;
+                const bboxWidth = mapBounds.maxX - mapBounds.minX;
+                const oldScale = height / bboxHeight * 0.9 * zoom;
+                const newScale = height / bboxHeight * 0.9 * newZoom;
+                
+                // Calculate world coordinates at view center with current zoom
+                const oldXOffset = (width - bboxWidth * oldScale) / 2 - mapBounds.minX * oldScale + panOffset.x;
+                const oldYOffset = (height - bboxHeight * oldScale) / 2 - mapBounds.minY * oldScale + panOffset.y;
+                const worldX = (centerX - oldXOffset) / oldScale;
+                const worldY = (centerY - oldYOffset) / oldScale;
+                
+                // Calculate new pan offset to keep the same world point at center
+                const newXOffset = (width - bboxWidth * newScale) / 2 - mapBounds.minX * newScale;
+                const newYOffset = (height - bboxHeight * newScale) / 2 - mapBounds.minY * newScale;
+                
+                setPanOffset({
+                  x: centerX - worldX * newScale - newXOffset,
+                  y: centerY - worldY * newScale - newYOffset
+                });
+              }
+              
+              setZoom(newZoom);
+            }}
             style={{ 
               marginLeft: "10px", 
               flex: 1

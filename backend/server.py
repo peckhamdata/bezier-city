@@ -10,10 +10,6 @@ import math
 import sys
 import time
 
-# Load the city data from file
-with open("bezier_city.json", "r") as f:
-    city_data = json.load(f)
-
 ################################################################################
 
 import asyncio
@@ -29,7 +25,7 @@ def load_npcs() -> List[NPC]:
         return [NPC(**npc) for npc in data]
 
 # Player setup
-PLAYER_FILE = Path("player_data.json")
+PLAYER_FILE = Path("bezier_city_backend/data/player_data.json")
 player: Player = None  # initialized on startup
 
 def load_player() -> Player:

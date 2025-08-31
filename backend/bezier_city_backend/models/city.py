@@ -1,4 +1,4 @@
-from pydantic import BaseModel, validator, model_validator
+from pydantic import BaseModel, field_validator, model_validator
 from typing import List, Dict
 
 
@@ -26,7 +26,8 @@ class Junction(BaseModel):
     coords: List[Point]  # [x, y]
     edge_ids: List[int]  # which edges touch this junction
 
-    @validator('coords', pre=True)
+    @field_validator('coords', mode='before')
+    @classmethod
     def convert_coords(cls, v):
         if isinstance(v[0], (int, float)):  # it's [x, y]
             return [Point(x=v[0], y=v[1])]

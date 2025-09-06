@@ -1,11 +1,11 @@
 import random
 
 buildings = {
-    "office": {"ascii": "O", "width": 8},
+    "office": {"ascii": "A", "width": 8},
     "bar": {"ascii": "B", "width": 5},
-    "yoga_studio": {"ascii": "Y", "width": 6},
-    "industrial": {"ascii": "I", "width": 12},
-    "workshop": {"ascii": "W", "width": 7},
+    "yoga_studio": {"ascii": "C", "width": 6},
+    "industrial": {"ascii": "D", "width": 12},
+    "workshop": {"ascii": "E", "width": 7},
 }
 
 def fill_street_with_buildings(street, edges, buildings=buildings):
@@ -51,16 +51,7 @@ def render_street(street, placed_elements):
     
     street_representation = []  # List of characters for rendering
 
-    dummy_placed_elements = [
-        {"ascii": "A"},
-        {"ascii": "B"},
-        {"ascii": "C"},
-        {"ascii": "D"},
-        {"ascii": "E"},
-        {"ascii": "+"},
-    ]
-
-    for element in dummy_placed_elements:
+    for element in placed_elements:
         ascii_char = element["ascii"]
         street_representation.append(ascii_char)  # Append each building/junction as a single token
 

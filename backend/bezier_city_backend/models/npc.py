@@ -12,6 +12,7 @@ class NPC(BaseModel):
     name: str
 
     current_edge_id: int
+    current_street_id: int
     progress: float  # 0.0 = start, 1.0 = end
     speed: float  # units per second (how fast they walk)
     direction: int = 1  # 1 = forward (0->1), -1 = backward (1->0)
@@ -19,6 +20,10 @@ class NPC(BaseModel):
     dialogue: List[str] = Field(default_factory=list)
 
     def update(self, delta_time: float, city: CityModel):
+        # Don't update if speed is zero
+        if self.speed == 0:
+            return
+            
         edge = city.get_edge(self.current_edge_id)
         start, end = edge.geometry
         edge_length = distance(start, end)
@@ -63,6 +68,8 @@ class NPC(BaseModel):
                 self.direction = -1
                 
             self.current_edge_id = next_edge_id
+            # Update street ID to match the new edge
+            self.current_street_id = next_edge.street_id
 
     def get_position(self, city: CityModel) -> List[float]:
         edge = city.get_edge(self.current_edge_id)

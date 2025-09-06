@@ -36,6 +36,7 @@ class Junction(BaseModel):
 class Street(BaseModel):
     id: int
     edge_ids: List[int]
+    length: int = 0  # Total length of all edges in the street
 
     def to_segments(self, edges: List["Edge"]) -> List[dict]:
         """
@@ -58,6 +59,20 @@ class Street(BaseModel):
         Returns the edges that belong to this street.
         """
         return [edge for edge in city_edges if edge.id in self.edge_ids]
+
+    def calculate_length(self, city_edges: List["Edge"]) -> int:
+        """
+        Calculate the total length of all edges in this street.
+        """
+        import math
+        total_length = 0
+        for edge_id in self.edge_ids:
+            edge = next((e for e in city_edges if e.id == edge_id), None)
+            if edge:
+                start, end = edge.geometry
+                edge_length = math.sqrt((end[0] - start[0])**2 + (end[1] - start[1])**2)
+                total_length += edge_length
+        return int(total_length)
     
 class StreetGeometryResponse(BaseModel):
     """
@@ -104,4 +119,10 @@ class CityModel(BaseModel):
     def build_lookups(self) -> 'CityModel':
         self.edges_by_id = {e.id: e for e in self.edges}
         self.junctions_by_id = {j.id: j for j in self.junctions}
+        
+        # Calculate street lengths
+        for street in self.streets:
+            if street.length == 0:  # Only calculate if not already set
+                street.length = street.calculate_length(self.edges)
+        
         return self

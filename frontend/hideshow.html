@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toggle Visibility</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        .container {
+            position: relative;
+            width: 600px;
+            height: 400px;
+            margin: auto;
+            border: 2px solid #000;
+        }
+        .content {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: opacity 0.3s ease-in-out;
+        }
+        #game-container {
+            background-color: lightblue;
+        }
+        #map-container {
+            background-color: lightgreen;
+        }
+    </style>
+</head>
+<body>
+
+    <button onclick="toggleView()">Toggle View</button>
+
+    <div class="container">
+        <div id="game-container" class="content">Game View</div>
+        <div id="map-container" class="content" style="display: none;">Map View</div>
+    </div>
+
+    <script>
+        function toggleView() {
+            const game = document.getElementById("game-container");
+            const map = document.getElementById("map-container");
+
+            if (game.style.display === "none") {
+                game.style.display = "flex";
+                map.style.display = "none";
+            } else {
+                game.style.display = "none";
+                map.style.display = "flex";
+            }
+        }
+    </script>
+
+</body>
+</html>
+

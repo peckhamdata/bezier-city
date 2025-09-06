@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { EventBus } from './EventBus';
 
 const API_BASE_URL = "http://127.0.0.1:9000";
 
@@ -156,16 +157,26 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
     const interval = setInterval(() => {
       fetch(`${API_BASE_URL}/npcs`)
         .then((res) => res.json())
-        .then(setNpcs)
+        .then((npcsData) => {
+          setNpcs(npcsData);
+          // Only emit if we have all the data needed
+          if (streets.length > 0 && edges.length > 0) {
+            EventBus.emit('npcUpdate', {
+              npcs: npcsData,
+              streets: streets,
+              edges: edges
+            });
+          }
+        })
         .catch(console.error);
     }, 200);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [streets, edges]); // Add dependencies so this updates when streets/edges are loaded
 
   // === Calculate world position of player ===
   const worldPosition = useMemo(() => {
-    const street = streets.find(s => s.id === 1); // Assume street 1
+    const street = streets.find(s => s.id === 0); // Assume street 0 where all NPCs are
     if (!street) return { x: 0, y: 0 };
     return calculateWorldPositionOnStreet(street, playerPosition.x);
   }, [playerPosition, streets]);
@@ -274,7 +285,7 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   
     // Draw player
     const worldPosition = calculateWorldPositionOnStreet(
-      streets.find((s) => s.id === 1)!,
+      streets.find((s) => s.id === 0)!,
       playerPosition.x
     );
   

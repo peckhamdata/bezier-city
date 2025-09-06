@@ -52,6 +52,12 @@ class Street(BaseModel):
                     "end": {"x": end[0], "y": end[1]}
                 })
         return segments
+
+    def edges(self, city_edges: List["Edge"]) -> List["Edge"]:
+        """
+        Returns the edges that belong to this street.
+        """
+        return [edge for edge in city_edges if edge.id in self.edge_ids]
     
 class StreetGeometryResponse(BaseModel):
     """

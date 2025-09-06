@@ -11,12 +11,15 @@ export class Game extends Scene
     streetBuildings: GameObjects.Image[] = [];
     player: Phaser.Physics.Arcade.Sprite;
     playerData: any;
+    npc: Phaser.Physics.Arcade.Sprite;
+
+    private readonly NPC_SCALE_FACTOR = 2;
 
     constructor ()
     {
         super('Game');
 
-        this.apiBaseUrl = 'http://localhost:8000';
+        this.apiBaseUrl = 'http://localhost:9000';
     }
 
     async getPlayerData() {
@@ -83,6 +86,14 @@ export class Game extends Scene
                 repeat: -1
             });
         });
+
+        this.anims.create({
+            key: 'npc-idle',
+            frames: this.anims.generateFrameNumbers('npc-01'),
+            frameRate: 2,
+            yoyo: false,
+            repeat: -1
+        });
         
         // ✅ Create player and play animation
         const startPosition = 200;
@@ -90,6 +101,20 @@ export class Game extends Scene
         this.player.setPosition(startPosition, this.scale.height);
         this.player.anims.play('walk-r');
         this.cameras.main.scrollX += startPosition;
+
+        // Create NPC on the starting street
+        const npcPosition = 400;
+        this.npc = this.physics.add.sprite(npcPosition, 0, 'npc-01').setOrigin(0, 1);
+        this.npc.setScale(this.NPC_SCALE_FACTOR);
+        this.npc.setPosition(npcPosition, this.scale.height);
+        
+        // Fix texture wrapping issue
+        const npcTexture = this.textures.get('npc-01');
+        npcTexture.getSourceImage().style.imageRendering = 'pixelated';
+        npcTexture.setFilter(Phaser.Textures.FilterMode.NEAREST);
+        
+        // this.npc.setGravityY(0); // Disable gravity for NPC
+        this.npc.anims.play('npc-idle');
     }    
 
     update() {

@@ -63,12 +63,15 @@ app = FastAPI(lifespan=lifespan)
 
 origins = [
     "http://localhost",
-    "http://localhost:8080",
+    "http://localhost:9080",
+    "http://127.0.0.1:9080",
+    "http://localhost:9000",
+    "http://127.0.0.1:9000",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Temporarily allow all origins for debugging
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -121,8 +124,15 @@ async def get_street(street_id: int):
 @app.get("/street/{street_id}/ascii")
 def get_ascii_street(street_id: int):
     """Retrieve an ASCII representation of the street with junctions only."""
-    street = get_street(street_id)
-    filled_street = fill_street_with_buildings(street)
+    try:
+        street = city.streets[street_id]
+    except (IndexError, KeyError):
+        raise HTTPException(status_code=404, detail="Street not found")
+    
+    # Use the street's edges() method for proper encapsulation
+    street_edges = street.edges(city.edges)
+    
+    filled_street = fill_street_with_buildings(street, street_edges)
 
     return {"id": street_id, "ascii": render_street(street, filled_street)}
 

@@ -42,6 +42,15 @@ export class Preloader extends Scene {
                     endFrame: 13
                 });
             });
+
+            this.load.spritesheet('npc-01', 'assets/npcs/01_npc.png', {
+                frameWidth: 32,
+                frameHeight: 64,
+                startFrame: 0,
+                endFrame: 1,
+                margin: 0,
+                spacing: 0
+            });
     
             this.load.image('hm', 'assets/01_hm.png');
 

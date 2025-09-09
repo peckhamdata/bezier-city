@@ -15,6 +15,13 @@ import time
 import asyncio
 from contextlib import asynccontextmanager
 
+# Street filter for debugging - only include these street IDs in API responses
+INCLUDED_STREETS = set({0, 17})  # e.g., {0, 17} to only include streets 0 and 17. Empty set = include all
+
+def filter_streets(street_id: int) -> bool:
+    """Return True if street should be included in responses"""
+    return len(INCLUDED_STREETS) == 0 or street_id in INCLUDED_STREETS
+
 # NPC setup
 NPC_FILE = Path("bezier_city_backend/data/npc.json")
 npcs: List[NPC] = []  # initialized on startup
@@ -90,7 +97,43 @@ city = CityModel(**city_data)
 
 @app.get("/blocks", response_model=List[Block])
 async def get_blocks():
-    return city.blocks
+    if len(INCLUDED_STREETS) == 0:
+        return city.blocks
+    else:
+        # Filter blocks to only include those with edges from included streets
+        filtered_blocks = []
+        for block in city.blocks:
+            # Check if any of the block's edges belong to included streets
+            has_included_edges = False
+            for edge_id in block.edge_ids:
+                edge = city.get_edge(edge_id)
+                if filter_streets(edge.street_id):
+                    has_included_edges = True
+                    break
+            
+            if has_included_edges:
+                # Filter the block's edge_ids and street_ids to only included ones
+                filtered_edge_ids = []
+                filtered_street_ids = []
+                
+                for edge_id in block.edge_ids:
+                    edge = city.get_edge(edge_id)
+                    if filter_streets(edge.street_id):
+                        filtered_edge_ids.append(edge_id)
+                        if edge.street_id not in filtered_street_ids:
+                            filtered_street_ids.append(edge.street_id)
+                
+                # Create filtered block
+                filtered_block = Block(
+                    id=block.id,
+                    polygon=block.polygon,
+                    edge_ids=filtered_edge_ids,
+                    street_ids=filtered_street_ids,
+                    cells=block.cells
+                )
+                filtered_blocks.append(filtered_block)
+        
+        return filtered_blocks
 
 @app.get("/blocks/{block_id}", response_model=Block)
 async def get_block(block_id: int):
@@ -99,26 +142,31 @@ async def get_block(block_id: int):
             return block
     raise HTTPException(status_code=404, detail="Block not found")
 
-@app.get("/streets", response_model=List[StreetSegmentsResponse])
+@app.get("/streets")
 async def get_streets():
     response = []
     for street in city.streets:
-        segments = street.to_segments(city.edges)  # <--- build segments from edges
-        response.append(StreetSegmentsResponse(id=street.id, segments=segments))
+        if filter_streets(street.id):
+            street_edges = street.edges(city.edges)
+            response.append({
+                "id": street.id,
+                "edge_ids": street.edge_ids,
+                "edges": street_edges,
+                "length": street.length
+            })
     return response
 
-@app.get("/street/{street_id}", response_model=StreetSegmentsResponse)
+@app.get("/street/{street_id}")
 async def get_street(street_id: int):
     for street in city.streets:
         if street.id == street_id:
-            raw_segments = street.to_segments(city.edges)
-            segments = [
-                Segment(
-                    start=Point(x=seg["start"]["x"], y=seg["start"]["y"]),
-                    end=Point(x=seg["end"]["x"], y=seg["end"]["y"])
-                ) for seg in raw_segments
-            ]
-            return StreetSegmentsResponse(id=street.id, segments=segments)
+            street_edges = street.edges(city.edges)
+            return {
+                "id": street.id,
+                "edge_ids": street.edge_ids,
+                "edges": street_edges,
+                "length": street.length
+            }
     raise HTTPException(status_code=404, detail="Street not found")
 
 @app.get("/street/{street_id}/ascii")
@@ -132,13 +180,18 @@ def get_ascii_street(street_id: int):
     # Use the street's edges() method for proper encapsulation
     street_edges = street.edges(city.edges)
     
-    filled_street = fill_street_with_buildings(street, street_edges)
+    filled_street = fill_street_with_buildings(street, street_edges, city, included_streets=INCLUDED_STREETS)
 
     return {"id": street_id, "ascii": render_street(street, filled_street)}
 
 @app.get("/edges", response_model=List[Edge])
 async def get_edges():
-    return city.edges
+    if len(INCLUDED_STREETS) == 0:
+        return city.edges
+    else:
+        # Filter edges to only include those from included streets
+        filtered_edges = [edge for edge in city.edges if filter_streets(edge.street_id)]
+        return filtered_edges
 
 @app.get("/edges/{edge_id}", response_model=Edge)
 async def get_edge(edge_id: int):
@@ -152,6 +205,20 @@ async def get_edge(edge_id: int):
 async def get_cells():
     cells = []
     for block in city.blocks:
+        # Check if this block has any edges from included streets
+        if len(INCLUDED_STREETS) > 0:
+            has_included_edges = False
+            for edge_id in block.edge_ids:
+                edge = city.get_edge(edge_id)
+                if filter_streets(edge.street_id):
+                    has_included_edges = True
+                    break
+            
+            # Skip this block if it doesn't have any included edges
+            if not has_included_edges:
+                continue
+        
+        # Add all cells from this block
         for cell_data in block.cells:
             cell = CellResponse(
                 id=cell_data.id,
@@ -173,9 +240,9 @@ async def get_cell(cell_id: int):
 
 # Sample building data structure
 BUILDINGS = {
-    "A": {
-        "name": "Skyscraper",
-        "description": "A tall modern skyscraper",
+    "L": {
+        "name": "Block",
+        "description": "Block",
         "assets": {
             0: "https://example.com/assets/buildings/A/wireframe.txt",
             1: "assets/01_block.png",
@@ -183,9 +250,9 @@ BUILDINGS = {
             3: "https://example.com/assets/buildings/A/polygon.obj"
         }
     },
-    "B": {
-        "name": "Warehouse",
-        "description": "A large industrial warehouse",
+    "O": {
+        "name": "Office",
+        "description": "An office",
         "assets": {
             0: "https://example.com/assets/buildings/B/wireframe.txt",
             1: "assets/01_office.png",
@@ -193,7 +260,7 @@ BUILDINGS = {
             3: "https://example.com/assets/buildings/B/polygon.obj"
         }
     },
-    "C": {
+    "B": {
         "name": "Brutal",
         "description": "Brutalist thing",
         "assets": {
@@ -203,9 +270,9 @@ BUILDINGS = {
             3: "https://example.com/assets/buildings/A/polygon.obj"
         }
     },
-    "D": {
-        "name": "Warehouse",
-        "description": "A large industrial warehouse",
+    "G": {
+        "name": "Glass building",
+        "description": "A glass building",
         "assets": {
             0: "https://example.com/assets/buildings/B/wireframe.txt",
             1: "assets/01_glass.png",
@@ -213,12 +280,22 @@ BUILDINGS = {
             3: "https://example.com/assets/buildings/B/polygon.obj"
         }
     },
-    "E": {
-        "name": "Warehouse",
-        "description": "A large industrial warehouse",
+    "H": {
+        "name": "Honeycomb",
+        "description": "Honeycomb building",
         "assets": {
             0: "https://example.com/assets/buildings/B/wireframe.txt",
             1: "assets/01_honeycomb.png",
+            2: "https://example.com/assets/buildings/B/bitmap.png",
+            3: "https://example.com/assets/buildings/B/polygon.obj"
+        }
+    },
+    "+": {
+        "name": "Junction",
+        "description": "Street intersection",
+        "assets": {
+            0: "https://example.com/assets/buildings/B/wireframe.txt",
+            1: "assets/01_junction.png",
             2: "https://example.com/assets/buildings/B/bitmap.png",
             3: "https://example.com/assets/buildings/B/polygon.obj"
         }

@@ -7,7 +7,7 @@ def _create_street():
     We can create a street with buildings on it
     """
 
-    with open('../tests/data/test_street_0_with_edges.json') as f:
+    with open('tests/data/test_street_0_with_edges.json') as f:
         street_data = load(f)
 
     edges = []
@@ -46,17 +46,5 @@ def test_add_buildings_to_street():
 
     assert(expected == elements)
 
-def test_get_ascii_street_with_junctions():
-
-    # Given a street
-    (street, edges) = _create_street()
-
-    # With junctions on it
-    import pdb; pdb.set_trace()
-    # When it is rendered as ascii
-
-    # Then the junctions appear as +
-
-    actual = 'ABCBBA+BBA+CC+A'
-    assert '+' in actual
-
+def test get_ascii_street():
+    

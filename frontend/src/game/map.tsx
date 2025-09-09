@@ -10,14 +10,11 @@ interface Point {
   y: number;
 }
 
-interface Segment {
-  start: Point;
-  end: Point;
-}
-
 interface Street {
   id: number;
-  segments: Segment[];
+  edge_ids: number[];
+  edges: Edge[];
+  length: number;
 }
 
 interface Cell {
@@ -45,6 +42,8 @@ interface Edge {
 type PlayerPosition = {
   x: number;
   y: number;
+  streetId?: number;
+  streetPosition?: number;
 };
 
 type StreetCanvasProps = {
@@ -53,26 +52,44 @@ type StreetCanvasProps = {
 
 // ==== Utility Functions ====
 
-function calculateWorldPositionOnStreet(street: Street, distance: number): Point {
-  let remaining = distance;
-  for (const segment of street.segments) {
-    const dx = segment.end.x - segment.start.x;
-    const dy = segment.end.y - segment.start.y;
-    const segmentLength = Math.sqrt(dx * dx + dy * dy);
+function calculateWorldPositionOnStreet(street: Street, distanceRatio: number): Point {
+  if (!street.edges || street.edges.length === 0) {
+    return { x: 0, y: 0 };
+  }
+  
+  // Calculate total street length first
+  let totalLength = 0;
+  for (const edge of street.edges) {
+    const start = edge.geometry[0];
+    const end = edge.geometry[1];
+    const dx = end[0] - start[0];
+    const dy = end[1] - start[1];
+    const edgeLength = Math.sqrt(dx * dx + dy * dy);
+    totalLength += edgeLength;
+  }
+  
+  // Convert ratio to actual distance
+  let remaining = distanceRatio * totalLength;
+  for (const edge of street.edges) {
+    const start = edge.geometry[0];
+    const end = edge.geometry[1];
+    const dx = end[0] - start[0];
+    const dy = end[1] - start[1];
+    const edgeLength = Math.sqrt(dx * dx + dy * dy);
 
-    if (remaining <= segmentLength) {
-      const ratio = remaining / segmentLength;
+    if (remaining <= edgeLength) {
+      const ratio = remaining / edgeLength;
       return {
-        x: segment.start.x + dx * ratio,
-        y: segment.start.y + dy * ratio,
+        x: start[0] + dx * ratio,
+        y: start[1] + dy * ratio,
       };
     }
 
-    remaining -= segmentLength;
+    remaining -= edgeLength;
   }
 
-  const lastSegment = street.segments[street.segments.length - 1];
-  return lastSegment.end;
+  const lastEdge = street.edges[street.edges.length - 1];
+  return { x: lastEdge.geometry[1][0], y: lastEdge.geometry[1][1] };
 }
 
 function calculateWorldPositionOnEdge(edge: Edge, progress: number): Point {
@@ -174,11 +191,48 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
     return () => clearInterval(interval);
   }, [streets, edges]); // Add dependencies so this updates when streets/edges are loaded
 
+  // === Handle street switch requests from game ===
+  useEffect(() => {
+    const handleStreetSwitch = (data: { streetId: number }) => {
+      console.log(`Map received street switch request to street ${data.streetId}`);
+      
+      // Immediately emit updated data for the new street
+      if (streets.length > 0 && edges.length > 0) {
+        EventBus.emit('npcUpdate', {
+          npcs: npcs,
+          streets: streets,
+          edges: edges
+        });
+      }
+    };
+
+    EventBus.on('requestStreetSwitch', handleStreetSwitch);
+    
+    return () => {
+      EventBus.off('requestStreetSwitch', handleStreetSwitch);
+    };
+  }, [npcs, streets, edges]);
+
   // === Calculate world position of player ===
   const worldPosition = useMemo(() => {
-    const street = streets.find(s => s.id === 0); // Assume street 0 where all NPCs are
-    if (!street) return { x: 0, y: 0 };
-    return calculateWorldPositionOnStreet(street, playerPosition.x);
+    // Use the street ID from player position, fallback to street 0
+    const streetId = playerPosition.streetId ?? 0;
+    const street = streets.find(s => s.id === streetId);
+    if (!street) {
+      console.log(`Street ${streetId} not found in map data`);
+      return { x: 0, y: 0 };
+    }
+    
+    // Use streetPosition if available, otherwise fall back to x
+    const position = playerPosition.streetPosition ?? playerPosition.x;
+    const worldPos = calculateWorldPositionOnStreet(street, position);
+    
+    // Debug logging
+    if (Math.random() < 0.1) { // Occasional logging
+      console.log(`Map: Player on street ${streetId}, position ${position.toFixed(3)} -> world (${worldPos.x.toFixed(1)}, ${worldPos.y.toFixed(1)})`);
+    }
+    
+    return worldPos;
   }, [playerPosition, streets]);
 
   useEffect(() => {
@@ -192,15 +246,17 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   
     // Compute bounding box
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    streets.forEach(({ segments }) => {
-      segments.forEach(({ start, end }) => {
-        [start, end].forEach(({ x, y }) => {
-          minX = Math.min(minX, x);
-          minY = Math.min(minY, y);
-          maxX = Math.max(maxX, x);
-          maxY = Math.max(maxY, y);
+    streets.forEach(({ edges }) => {
+      if (edges) {
+        edges.forEach((edge) => {
+          edge.geometry.forEach((point) => {
+            minX = Math.min(minX, point[0]);
+            minY = Math.min(minY, point[1]);
+            maxX = Math.max(maxX, point[0]);
+            maxY = Math.max(maxY, point[1]);
+          });
         });
-      });
+      }
     });
   
     const bboxWidth = maxX - minX;
@@ -235,13 +291,17 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
     // Draw Streets
     ctx.strokeStyle = "cyan";
     ctx.lineWidth = 2;
-    streets.forEach(({ segments }) => {
-      segments.forEach(({ start, end }) => {
-        ctx.beginPath();
-        ctx.moveTo(start.x * scale + xOffset, start.y * scale + yOffset);
-        ctx.lineTo(end.x * scale + xOffset, end.y * scale + yOffset);
-        ctx.stroke();
-      });
+    streets.forEach(({ edges }) => {
+      if (edges) {
+        edges.forEach((edge) => {
+          const start = edge.geometry[0];
+          const end = edge.geometry[1];
+          ctx.beginPath();
+          ctx.moveTo(start[0] * scale + xOffset, start[1] * scale + yOffset);
+          ctx.lineTo(end[0] * scale + xOffset, end[1] * scale + yOffset);
+          ctx.stroke();
+        });
+      }
     });
   
   }, [streets, cells, zoom, panOffset]);
@@ -258,15 +318,17 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   
     // Same bbox math
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    streets.forEach(({ segments }) => {
-      segments.forEach(({ start, end }) => {
-        [start, end].forEach(({ x, y }) => {
-          minX = Math.min(minX, x);
-          minY = Math.min(minY, y);
-          maxX = Math.max(maxX, x);
-          maxY = Math.max(maxY, y);
+    streets.forEach(({ edges }) => {
+      if (edges) {
+        edges.forEach((edge) => {
+          edge.geometry.forEach((point) => {
+            minX = Math.min(minX, point[0]);
+            minY = Math.min(minY, point[1]);
+            maxX = Math.max(maxX, point[0]);
+            maxY = Math.max(maxY, point[1]);
+          });
         });
-      });
+      }
     });
   
     const bboxWidth = maxX - minX;
@@ -283,12 +345,7 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   
     ctx.clearRect(0, 0, width, height);
   
-    // Draw player
-    const worldPosition = calculateWorldPositionOnStreet(
-      streets.find((s) => s.id === 0)!,
-      playerPosition.x
-    );
-  
+    // Draw player (using the already calculated worldPosition from the useMemo)
     ctx.beginPath();
     ctx.arc(
       worldPosition.x * scale + xOffset,
@@ -332,7 +389,7 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
       ctx.fillStyle = "gold"; // Reset color for next NPC
     });
   
-  }, [playerPosition, npcs, streets, edges, zoom, panOffset]);
+  }, [worldPosition, playerPosition, npcs, streets, edges, zoom, panOffset]);
   
 
   // === Pan and Zoom handling ===
@@ -429,7 +486,7 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
         margin: "10px",
         flexShrink: 0
       }}>
-        Player scene X: {playerPosition.x.toFixed(2)} — World X: {worldPosition.x.toFixed(2)}, Y:{" "}
+        Player: {((playerPosition.streetPosition ?? 0) * 100).toFixed(1)}% of street {playerPosition.streetId ?? 0} — World X: {worldPosition.x.toFixed(2)}, Y:{" "}
         {worldPosition.y.toFixed(2)}
       </p>
       <div style={{ 

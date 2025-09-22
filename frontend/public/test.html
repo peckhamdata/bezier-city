@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bézier Curve Player Position Visualizer</title>
+  <style>
+    canvas {
+      border: 1px solid black;
+      margin-top: 10px;
+    }
+    body {
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <h1>Bézier Curve Player Position Visualizer</h1>
+  <label for="playerX">Player X Position:</label>
+  <input type="range" id="playerX" min="0" max="988" value="0" step="1" style="width: 300px;" />
+  <span id="valueLabel">0</span>
+
+  <canvas id="canvas" width="800" height="600"></canvas>
+
+  <script>
+    const street = {
+      id: 1,
+      length: 988,
+      geometry: {
+        start: { x: 874.0386719675123, y: 874.0386719675123 },
+        control: { x: 352.75779482000416, y: 162.57487198340743 },
+        end: { x: 467.376259713199, y: 1022.0516854229737 },
+      },
+    };
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const playerXInput = document.getElementById("playerX");
+    const valueLabel = document.getElementById("valueLabel");
+
+    // Helper to get bounding box of curve
+    function getCurveBounds({ start, control, end }) {
+      const xs = [start.x, control.x, end.x];
+      const ys = [start.y, control.y, end.y];
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+      return { minX, maxX, minY, maxY };
+    }
+
+    function calculateWorldPosition(playerX, street) {
+      let t = playerX / street.length;
+      t = Math.max(0, Math.min(1, t));
+
+      const { start, control, end } = street.geometry;
+
+      const x =
+        (1 - t) * (1 - t) * start.x +
+        2 * (1 - t) * t * control.x +
+        t * t * end.x;
+
+      const y =
+        (1 - t) * (1 - t) * start.y +
+        2 * (1 - t) * t * control.y +
+        t * t * end.y;
+
+      return { x, y };
+    }
+
+    function draw(playerX) {
+      valueLabel.textContent = playerX;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const bounds = getCurveBounds(street.geometry);
+      const margin = 40;
+
+      const scaleX = (canvas.width - margin * 2) / (bounds.maxX - bounds.minX);
+      const scaleY = (canvas.height - margin * 2) / (bounds.maxY - bounds.minY);
+      const scale = Math.min(scaleX, scaleY);
+
+      const offsetX = margin - bounds.minX * scale;
+      const offsetY = margin - bounds.minY * scale;
+
+      function tx(x) {
+        return x * scale + offsetX;
+      }
+      function ty(y) {
+        return y * scale + offsetY;
+      }
+
+      const { start, control, end } = street.geometry;
+
+      // Draw the curve
+      ctx.beginPath();
+      ctx.moveTo(tx(start.x), ty(start.y));
+      ctx.quadraticCurveTo(tx(control.x), ty(control.y), tx(end.x), ty(end.y));
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Draw control points (optional for debugging)
+      ctx.fillStyle = "red";
+      ctx.beginPath();
+      ctx.arc(tx(start.x), ty(start.y), 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(tx(control.x), ty(control.y), 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(tx(end.x), ty(end.y), 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw player position
+      const world = calculateWorldPosition(playerX, street);
+      ctx.beginPath();
+      ctx.arc(tx(world.x), ty(world.y), 6, 0, Math.PI * 2);
+      ctx.fillStyle = "turquoise";
+      ctx.fill();
+    }
+
+    // Initial draw
+    draw(Number(playerXInput.value));
+
+    playerXInput.addEventListener("input", (e) => {
+      draw(Number(e.target.value));
+    });
+  </script>
+</body>
+</html>

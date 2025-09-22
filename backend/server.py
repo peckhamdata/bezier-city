@@ -3,7 +3,7 @@ from bezier_city_backend.models.npc import NPC
 from bezier_city_backend.models.player import Player
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
-from bezier_city_backend.buildings import fill_street_with_buildings, render_street 
+from bezier_city_backend.buildings import fill_street_with_buildings 
 from bezier_city_backend.models.city import CityModel, Block, Street, Edge, Cell, CellResponse, StreetSegmentsResponse, Segment, Point
 import json
 import math
@@ -16,7 +16,7 @@ import asyncio
 from contextlib import asynccontextmanager
 
 # Street filter for debugging - only include these street IDs in API responses
-INCLUDED_STREETS = set({0, 17})  # e.g., {0, 17} to only include streets 0 and 17. Empty set = include all
+INCLUDED_STREETS = set({})  # e.g., {0, 17} to only include streets 0 and 17. Empty set = include all
 
 def filter_streets(street_id: int) -> bool:
     """Return True if street should be included in responses"""
@@ -86,9 +86,13 @@ app.add_middleware(
 ################################################################################
 
 # Load your city once at startup
-with open('bezier_city_full.json') as f:
+# Load step 2 output for testing bezier junctions
+with open('../karte/step2_for_game.json') as f:
     city_data = json.load(f)
 
+# Load junction side information
+with open('../karte/junction_sides.json') as f:
+    junction_sides = json.load(f)
 
 city = CityModel(**city_data)
 
@@ -152,7 +156,8 @@ async def get_streets():
                 "id": street.id,
                 "edge_ids": street.edge_ids,
                 "edges": street_edges,
-                "length": street.length
+                "length": street.length,
+                "type": street.type
             })
     return response
 
@@ -169,9 +174,24 @@ async def get_street(street_id: int):
             }
     raise HTTPException(status_code=404, detail="Street not found")
 
-@app.get("/street/{street_id}/ascii")
-def get_ascii_street(street_id: int):
-    """Retrieve an ASCII representation of the street with junctions only."""
+@app.get("/street/{street_id}")
+def get_street(street_id: int):
+    """Retrieve street data at map resolution with junctions."""
+    try:
+        street = city.streets[street_id]
+    except (IndexError, KeyError):
+        raise HTTPException(status_code=404, detail="Street not found")
+    
+    return {
+        "id": street.id,
+        "edge_ids": street.edge_ids,
+        "length": street.length,
+        "junctions": street.junctions
+    }
+
+@app.get("/street/{street_id}/view")
+def get_street_view(street_id: int):
+    """Retrieve street view data at game resolution with buildings and junctions."""
     try:
         street = city.streets[street_id]
     except (IndexError, KeyError):
@@ -180,9 +200,19 @@ def get_ascii_street(street_id: int):
     # Use the street's edges() method for proper encapsulation
     street_edges = street.edges(city.edges)
     
-    filled_street = fill_street_with_buildings(street, street_edges, city, included_streets=INCLUDED_STREETS)
+    # Get buildings with pixel positions
+    filled_street = fill_street_with_buildings(street, street_edges, city, 
+                                              included_streets=INCLUDED_STREETS,
+                                              junction_sides=junction_sides)
+    
+    # Calculate total pixel width
+    total_pixel_width = max((elem["position"] + elem["width"] for elem in filled_street), default=0)
 
-    return {"id": street_id, "ascii": render_street(street, filled_street)}
+    return {
+        "id": street_id, 
+        "total_pixel_width": total_pixel_width,
+        "buildings": filled_street
+    }
 
 @app.get("/edges", response_model=List[Edge])
 async def get_edges():
@@ -286,6 +316,16 @@ BUILDINGS = {
         "assets": {
             0: "https://example.com/assets/buildings/B/wireframe.txt",
             1: "assets/01_honeycomb.png",
+            2: "https://example.com/assets/buildings/B/bitmap.png",
+            3: "https://example.com/assets/buildings/B/polygon.obj"
+        }
+    },
+    "N": {
+        "name": "Narrow",
+        "description": "Placeholder",
+        "assets": {
+            0: "https://example.com/assets/buildings/B/wireframe.txt",
+            1: "assets/01_narrow.png",
             2: "https://example.com/assets/buildings/B/bitmap.png",
             3: "https://example.com/assets/buildings/B/polygon.obj"
         }

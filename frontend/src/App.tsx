@@ -12,6 +12,7 @@ type PlayerPosition = {
 function App() {
     const [showGame, setShowGame] = useState(true);
     const [playerPosition, setPlayerPosition] = useState<PlayerPosition>({ x: 0, y: 0 });
+    const [currentStreetId, setCurrentStreetId] = useState(0);
 
 
     const phaserRef = useRef<IRefPhaserGame | null>(null);
@@ -37,6 +38,10 @@ function App() {
     // New: Listen for player position updates
     const handlePositionUpdate = (pos) => {
         setPlayerPosition(pos);
+        // Extract street ID if available
+        if (pos.street_id !== undefined) {
+            setCurrentStreetId(pos.street_id);
+        }
       };
   
       EventBus.on("playerPosition", handlePositionUpdate);
@@ -50,7 +55,7 @@ function App() {
     }, [showGame]);
 
     const toggleView = () => {
-        setShowGame((prev) => !prev);
+        setShowGame(!showGame);
     };
 
     return (
@@ -88,7 +93,7 @@ function App() {
                 width: "100%",
                 overflow: "hidden"
             }}>
-                {/* Game Div - Stacked on top */}
+                {/* Game Div */}
                 <div
                     id="gameContainer"
                     style={{
@@ -103,7 +108,7 @@ function App() {
                     <PhaserGame ref={phaserRef} />
                 </div>
 
-                {/* Map Div - Same size & position, behind game when hidden */}
+                {/* Map Div */}
                 <div
                     id="mapContainer"
                     style={{
@@ -112,11 +117,12 @@ function App() {
                         left: 0,
                         width: "100%",
                         height: "100%",
-                        visibility: showGame ? "hidden" : "visible",
+                        visibility: !showGame ? "visible" : "hidden",
                     }}
                 >
                     <StreetCanvas playerPosition={playerPosition}/>
                 </div>
+
             </div>
         </div>
     );

@@ -15,6 +15,7 @@ interface Street {
   edge_ids: number[];
   edges: Edge[];
   length: number;
+  type?: string; // 'bezier' or 'bresenham'
 }
 
 interface Cell {
@@ -111,9 +112,25 @@ function randomNeonColor() {
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
+function getStreetColor(streetType?: string): string {
+  switch (streetType) {
+    case 'bezier':
+      return '#FF073A';   // Neon red for curved streets
+    case 'bresenham':
+      return '#0FF0FC';   // Neon cyan for straight streets
+    default:
+      return '#FFFFFF';   // White for unknown types
+  }
+}
+
 // ==== Component ====
 
 const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
+  // TEMPORARY: Configuration for comparison with step 1
+  const SHOW_CELLS = true;
+  const SHOW_NPCS = true;
+  const SHOW_BRESENHAM_STREETS = true;
+  
   const staticCanvasRef = useRef<HTMLCanvasElement>(null);
   const dynamicCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -149,7 +166,10 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   useEffect(() => {
     fetch(`${API_BASE_URL}/streets`)
       .then((res) => res.json())
-      .then((data: Street[]) => setStreets(data))
+      .then((data: Street[]) => {
+        console.log('Fetched streets:', data);
+        setStreets(data);
+      })
       .catch(console.error);
   }, []);
 
@@ -157,7 +177,10 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
   useEffect(() => {
     fetch(`${API_BASE_URL}/cells`)
       .then((res) => res.json())
-      .then((data: Cell[]) => setCells(data))
+      .then((data: Cell[]) => {
+        console.log('Fetched cells:', data);
+        setCells(data);
+      })
       .catch(console.error);
   }, []);
 
@@ -227,17 +250,15 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
     const position = playerPosition.streetPosition ?? playerPosition.x;
     const worldPos = calculateWorldPositionOnStreet(street, position);
     
-    // Debug logging
-    if (Math.random() < 0.1) { // Occasional logging
-      console.log(`Map: Player on street ${streetId}, position ${position.toFixed(3)} -> world (${worldPos.x.toFixed(1)}, ${worldPos.y.toFixed(1)})`);
-    }
     
     return worldPos;
   }, [playerPosition, streets]);
 
   useEffect(() => {
     const canvas = staticCanvasRef.current;
-    if (!canvas || !streets.length || !cells.length) return;
+    console.log('Render check:', { canvas: !!canvas, streetsLength: streets.length, cellsLength: cells.length, streets, cells });
+    // Temporarily skip cells requirement to test street rendering
+    if (!canvas || !streets.length) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
   
@@ -274,26 +295,33 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
     ctx.clearRect(0, 0, width, height);
   
     // Draw Cells
-    ctx.lineWidth = 1;
-    cells.forEach((cell) => {
-      ctx.strokeStyle = randomNeonColor();
-      ctx.beginPath();
-      cell.coords.forEach((point, index) => {
-        const x = point.x * scale + xOffset;
-        const y = point.y * scale + yOffset;
-        if (index === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+    if (SHOW_CELLS) {
+      ctx.lineWidth = 1;
+      cells.forEach((cell) => {
+        ctx.strokeStyle = randomNeonColor();
+        ctx.beginPath();
+        cell.coords.forEach((point, index) => {
+          const x = point.x * scale + xOffset;
+          const y = point.y * scale + yOffset;
+          if (index === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+        ctx.stroke();
       });
-      ctx.closePath();
-      ctx.stroke();
-    });
+    }
   
     // Draw Streets
-    ctx.strokeStyle = "cyan";
     ctx.lineWidth = 2;
-    streets.forEach(({ edges }) => {
-      if (edges) {
-        edges.forEach((edge) => {
+    console.log('Drawing streets, total count:', streets.length);
+    streets.forEach((street, index) => {
+      // Filter street types based on configuration
+      const shouldRender = street.type === 'bezier' || (street.type === 'bresenham' && SHOW_BRESENHAM_STREETS);
+      console.log(`Street ${index}:`, { id: street.id, type: street.type, hasEdges: !!street.edges, edgeCount: street.edges?.length, shouldRender });
+      
+      if (street.edges && shouldRender) {
+        ctx.strokeStyle = getStreetColor(street.type);
+        street.edges.forEach((edge) => {
           const start = edge.geometry[0];
           const end = edge.geometry[1];
           ctx.beginPath();
@@ -354,40 +382,42 @@ const StreetCanvas = ({ playerPosition }: StreetCanvasProps) => {
       0,
       Math.PI * 2
     );
-    ctx.fillStyle = "turquoise";
+    ctx.fillStyle = "pink";
     ctx.fill();
     ctx.closePath();
 
     // Draw NPCs
-    ctx.fillStyle = "gold";
-    npcs.forEach((npc) => {
-      const edge = edges.find((e) => e.id === npc.current_edge_id);
-      if (!edge) return;
+    if (SHOW_NPCS) {
+      ctx.fillStyle = "gold";
+      npcs.forEach((npc) => {
+        const edge = edges.find((e) => e.id === npc.current_edge_id);
+        if (!edge) return;
+        
+        const npcPos = calculateWorldPositionOnEdge(edge, npc.progress);
+        
+        ctx.beginPath();
+        ctx.arc(
+          npcPos.x * scale + xOffset,
+          npcPos.y * scale + yOffset,
+          6,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+        ctx.closePath();
       
-      const npcPos = calculateWorldPositionOnEdge(edge, npc.progress);
-      
-      ctx.beginPath();
-      ctx.arc(
-        npcPos.x * scale + xOffset,
-        npcPos.y * scale + yOffset,
-        6,
-        0,
-        Math.PI * 2
-      );
-      ctx.fill();
-      ctx.closePath();
-      
-      // Draw NPC name
-      ctx.fillStyle = "white";
-      ctx.font = "12px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText(
-        npc.name,
-        npcPos.x * scale + xOffset,
-        npcPos.y * scale + yOffset - 10
-      );
-      ctx.fillStyle = "gold"; // Reset color for next NPC
-    });
+        // Draw NPC name
+        ctx.fillStyle = "white";
+        ctx.font = "12px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          npc.name,
+          npcPos.x * scale + xOffset,
+          npcPos.y * scale + yOffset - 10
+        );
+        ctx.fillStyle = "gold"; // Reset color for next NPC
+      });
+    }
   
   }, [worldPosition, playerPosition, npcs, streets, edges, zoom, panOffset]);
   

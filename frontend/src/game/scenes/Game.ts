@@ -5,6 +5,7 @@ export class Game extends Scene
     camera: Phaser.Cameras.Scene2D.Camera;
     cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     sky: GameObjects.Image;
+    skyline: GameObjects.TileSprite;
 
     apiBaseUrl: string;
     startStreetId: number;
@@ -19,7 +20,6 @@ export class Game extends Scene
     diagnosticsText: Phaser.GameObjects.Text;
     currentNPCsOnStreet: any[] = [];
     allNPCs: any[] = [];
-    edgeVisualizers: Phaser.GameObjects.Rectangle[] = [];
     currentStreetData: any = null;
     currentEdges: any[] = [];
     lastJunctionSwitchTime: number = 0;
@@ -50,10 +50,10 @@ export class Game extends Scene
         return data;
     }
 
-    async getStreet(streetId: number) {
-        const response = await fetch(`${this.apiBaseUrl}/street/${streetId}/ascii`);
+    async getStreetView(streetId: number) {
+        const response = await fetch(`${this.apiBaseUrl}/street/${streetId}/view`);
         const data = await response.json();
-        return data.ascii;
+        return data;
     }
 
     preload() {
@@ -63,8 +63,56 @@ export class Game extends Scene
         this.cursors = this.input.keyboard.createCursorKeys();
         this.sky = this.add.image(0, 0, 'sky').setOrigin(0);
         this.sky.setDisplaySize(this.scale.width, this.scale.height);
+        this.sky.setDepth(-1); // Put sky in the back
+
+        // Create skyline as a tiling sprite for parallax effect
+        // Position it at the bottom of the screen, behind buildings but in front of sky
+        this.skyline = this.add.tileSprite(0, 0, this.scale.width, 200, 'skyline').setOrigin(0, 1);
+        this.skyline.y = this.scale.height; // Position at bottom of screen
+        this.skyline.setDepth(-0.5); // Behind buildings (default 0) but in front of sky (-1)
 
     }    
+
+    renderStreetElements(streetData: any) {
+        // Clear existing buildings
+        this.streetBuildings.forEach(building => building.destroy());
+        this.streetBuildings = [];
+        
+        // Render buildings and junctions
+        for (const element of streetData.buildings) {
+            if (element.name === 'junction' && element.center !== undefined) {
+                // Determine junction asset and depth based on side
+                let junctionAsset = element.ascii; // default to '+'
+                let junctionDepth = 0; // same layer as buildings by default
+                
+                if (element.side === 'right') {
+                    junctionAsset = 'right-junction';
+                    junctionDepth = 10; // in front of buildings
+                }
+                
+                // Junction should be centered at the geometric position
+                const junctionImage = this.add.image(element.center, 0, junctionAsset);
+                junctionImage.setOrigin(0.5, 0); // Center horizontally, top vertically
+                junctionImage.y = this.scale.height - junctionImage.height;
+                junctionImage.setDisplaySize(element.width, junctionImage.height);
+                junctionImage.setDepth(junctionDepth);
+                this.streetBuildings.push(junctionImage);
+            } else {
+                // Regular building positioned by left edge
+                const building = this.add.image(element.position, 0, element.ascii).setOrigin(0);
+                building.y = this.scale.height - building.height;
+                building.setDisplaySize(element.width, building.height);
+                this.streetBuildings.push(building);
+            }
+        }
+        
+        // Update sky and skyline sizes
+        this.sky.setDisplaySize(streetData.total_pixel_width, this.scale.height);
+        
+        if (this.skyline) {
+            this.skyline.width = streetData.total_pixel_width;
+        }
+    }
 
     async create() {
         // Load player data to get current street
@@ -72,16 +120,9 @@ export class Game extends Scene
         const playerPosition = await this.getPlayerPosition();
         const playerStreetId = playerPosition.street_id || 0; // fallback to street 0
         
-        const street = await this.getStreet(playerStreetId);
-        let x:number = 0;
-        for (const char of street) {
-            console.log(`Loading building character: '${char}'`);
-            const building = this.add.image(x, 0, char).setOrigin(0);
-            building.y = this.scale.height - building.height;
-            x += building.width;
-            this.streetBuildings.push(building);    
-        }
-        this.sky.setDisplaySize(x, this.scale.height);
+        const streetData = await this.getStreetView(playerStreetId);
+        this.renderStreetElements(streetData);
+        
         EventBus.emit('current-scene-ready', this);
 
         // Add the HM Sign
@@ -151,10 +192,6 @@ export class Game extends Scene
             // Calculate total street width in pixels (sum of building widths)
             const totalStreetPixelWidth = this.streetBuildings.reduce((sum, building) => sum + building.width, 0);
             
-            // Create edge visualizers if needed (recreate after street switch)
-            if (this.edgeVisualizers.length === 0 && currentStreet.edges) {
-                this.createEdgeVisualizers(currentStreet, totalStreetPixelWidth);
-            }
             
             // Update or create sprites for all NPCs on current street
             this.manageNPCSprites(npcsOnCurrentStreet, currentStreet, totalStreetPixelWidth);
@@ -237,6 +274,21 @@ export class Game extends Scene
         sprite.setScale(this.NPC_SCALE_FACTOR);
         sprite.setPosition(0, this.scale.height);
         
+        // Apply color tint based on NPC ID
+        const colors = [
+            0xffffff, // white (original)
+            0xff6b6b, // red
+            0x4ecdc4, // teal
+            0x45b7d1, // blue
+            0x96ceb4, // green
+            0xfeca57, // yellow
+            0xff9ff3, // pink
+            0x54a0ff, // light blue
+            0x5f27cd, // purple
+            0x00d2d3  // cyan
+        ];
+        sprite.setTint(colors[npcId % colors.length]);
+        
         // Fix texture wrapping issue
         const npcTexture = this.textures.get('npc-01');
         if (npcTexture) {
@@ -249,66 +301,7 @@ export class Game extends Scene
         return sprite;
     }
 
-    createEdgeVisualizers(streetData: any, totalStreetPixelWidth: number) {
-        // Clear existing visualizers
-        this.edgeVisualizers.forEach(rect => rect.destroy());
-        this.edgeVisualizers = [];
-        
-        // Different colors for each edge
-        const edgeColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff, 0xffa500, 0x800080];
-        
-        // Calculate total street length from edges
-        const totalStreetLength = streetData.edges.reduce((sum: number, edge: any) => {
-            const edgeLength = Math.sqrt(
-                Math.pow(edge.geometry[1][0] - edge.geometry[0][0], 2) + 
-                Math.pow(edge.geometry[1][1] - edge.geometry[0][1], 2)
-            );
-            return sum + edgeLength;
-        }, 0);
-        
-        // Create a visualizer for each edge
-        let cumulativeDistance = 0;
-        streetData.edges.forEach((edge: any, index: number) => {
-            const edgeLength = Math.sqrt(
-                Math.pow(edge.geometry[1][0] - edge.geometry[0][0], 2) + 
-                Math.pow(edge.geometry[1][1] - edge.geometry[0][1], 2)
-            );
-            
-            // Calculate pixel width and position for this edge
-            const edgePixelWidth = (edgeLength / totalStreetLength) * totalStreetPixelWidth;
-            const edgePixelX = (cumulativeDistance / totalStreetLength) * totalStreetPixelWidth;
-            
-            // Create a semi-transparent rectangle for this edge
-            const rect = this.add.rectangle(
-                edgePixelX + edgePixelWidth / 2,
-                this.scale.height - 20,
-                edgePixelWidth,
-                40,
-                edgeColors[index % edgeColors.length],
-                0.3
-            );
-            
-            // Add edge ID text
-            const edgeText = this.add.text(
-                edgePixelX + edgePixelWidth / 2,
-                this.scale.height - 20,
-                `E${edge.id}`,
-                { fontSize: '12px', color: '#ffffff' }
-            );
-            edgeText.setOrigin(0.5);
-            
-            // Store both rectangle and text
-            this.edgeVisualizers.push(rect);
-            this.edgeVisualizers.push(edgeText as any);
-            
-            cumulativeDistance += edgeLength;
-            
-            // Log edge info only if there's an issue
-            if (isNaN(edgeLength) || isNaN(edgePixelWidth)) {
-                console.error(`Edge ${edge.id} calculation error: length=${edgeLength}, pixels=${edgePixelWidth}`);
-            }
-        });
-    }
+
 
     setupZoomControls() {
         // Mouse wheel zoom
@@ -365,14 +358,11 @@ export class Game extends Scene
             diagnosticsInfo.push(`Player: X=${this.player.x.toFixed(1)} (${playerPercent.toFixed(1)}% of street)`);
         }
         
-        // All NPCs data
-        diagnosticsInfo.push(`--- All NPCs (${this.allNPCs.length}) ---`);
-        this.allNPCs.forEach((npcData: any) => {
-            const sprite = this.npcSprites.get(npcData.id);
-            const spriteInfo = sprite ? ` | Sprite X=${sprite.x.toFixed(1)}` : '';
-            const isOnCurrentStreet = npcData.current_street_id === this.currentStreetId ? ' 🔹' : '';
-            diagnosticsInfo.push(`${npcData.name}: street=${npcData.current_street_id}, edge=${npcData.current_edge_id}, ${(npcData.progress * 100).toFixed(1)}%${spriteInfo}${isOnCurrentStreet}`);
-        });
+        // NPC summary instead of detailed list
+        diagnosticsInfo.push(`--- NPCs ---`);
+        diagnosticsInfo.push(`Total NPCs: ${this.allNPCs.length}`);
+        diagnosticsInfo.push(`On current street: ${npcsOnStreet.length}`);
+        diagnosticsInfo.push(`Active sprites: ${this.npcSprites.size}`);
         
         // Zoom info
         diagnosticsInfo.push(`Zoom: ${this.zoomLevel.toFixed(2)}x`);
@@ -436,7 +426,6 @@ export class Game extends Scene
             }
         }
         else if (this.cursors.up.isDown) {
-            console.log('Up arrow pressed');
             this.handleJunctionNavigation();
         }
 
@@ -476,13 +465,19 @@ export class Game extends Scene
             // Debug logging
             if (Math.random() < 0.01) { // Only log occasionally to avoid spam
                 const totalPixelWidth = this.streetBuildings.reduce((sum, building) => sum + building.width, 0);
-                console.log(`Player on street ${this.currentStreetId}, position ${streetPosition.toFixed(3)} (${this.player.x}/${totalPixelWidth})`);
             }
         }
 
         // ✅ Pause animation when idle
         if (this.player && !moving) {
             this.player.anims.stop();
+        }
+        
+        // Update skyline parallax effect
+        if (this.skyline) {
+            // Parallax factor: 0.3 means skyline moves at 30% of camera speed
+            const parallaxFactor = 0.3;
+            this.skyline.tilePositionX = this.cameras.main.scrollX * parallaxFactor;
         }
         
         // Update diagnostics every frame (will show latest player position)
@@ -514,7 +509,6 @@ export class Game extends Scene
             return;
         }
         
-        console.log('Checking for junction...');
         this.isCheckingJunction = true;
 
         try {
@@ -529,7 +523,6 @@ export class Game extends Scene
             const junction = this.findNearbyJunction(playerPosition, junctionThreshold);
             
             if (junction) {
-                console.log(`Player at junction ${junction.id}, finding connected streets...`);
                 
                 // Get connected streets at this junction
                 const connectedStreets = await this.getConnectedStreetsAtJunction(junction.id);
@@ -545,7 +538,6 @@ export class Game extends Scene
                 if (otherStreets.length > 0) {
                     // Choose random street if multiple options
                     const targetStreetId = otherStreets[Math.floor(Math.random() * otherStreets.length)];
-                    console.log(`Switching from street ${this.currentStreetId} to street ${targetStreetId}`);
                     
                     // Update cooldown timer
                     this.lastJunctionSwitchTime = Date.now();
@@ -553,7 +545,6 @@ export class Game extends Scene
                     // Switch to the new street at the junction
                     this.switchToStreetAtJunction(targetStreetId, junction.id);
                 } else {
-                    console.log('No other streets available at this junction');
                 }
             }
         } finally {
@@ -572,7 +563,6 @@ export class Game extends Scene
             return;
         }
 
-        console.log(`Player reached ${boundary} of street ${this.currentStreetId}`);
 
         let junctionId: number;
         
@@ -595,7 +585,6 @@ export class Game extends Scene
         if (otherStreets.length > 0) {
             // Choose random street if multiple options
             const targetStreetId = otherStreets[Math.floor(Math.random() * otherStreets.length)];
-            console.log(`Auto-switching from street ${this.currentStreetId} to street ${targetStreetId} (reached ${boundary})`);
             
             // Update cooldown timer
             this.lastJunctionSwitchTime = currentTime;
@@ -603,7 +592,6 @@ export class Game extends Scene
             // Position player at the junction location within the target street
             this.switchToStreetAtJunction(targetStreetId, junctionId);
         } else {
-            console.log(`No other streets available at ${boundary} of street ${this.currentStreetId}`);
         }
     }
 
@@ -690,30 +678,67 @@ export class Game extends Scene
         }
     }
 
-    async loadStreetBuildings(streetId: number, playerPosition: 'start' | 'end' = 'start') {
-        // Fetch the ASCII representation of the street
-        const street = await this.getStreet(streetId);
+    calculateGeometricJunctionPositions(streetData: any): Map<number, number> {
+        const positions = new Map<number, number>();
         
-        // Clear any existing buildings
-        this.streetBuildings.forEach(building => building.destroy());
-        this.streetBuildings = [];
-        
-        // Create new buildings from ASCII
-        let x = 0;
-        for (const char of street) {
-            console.log(`Loading building character: '${char}'`);
-            const building = this.add.image(x, 0, char).setOrigin(0);
-            building.y = this.scale.height - building.height;
-            x += building.width;
-            this.streetBuildings.push(building);
+        if (!streetData || !streetData.edges) {
+            return positions;
         }
         
-        // Update sky size to match street width
-        this.sky.setDisplaySize(x, this.scale.height);
+        // Calculate total street length
+        const totalLength = streetData.edges.reduce((sum: number, edge: any) => {
+            const [start, end] = edge.geometry;
+            return sum + Math.sqrt(Math.pow(end[0] - start[0], 2) + Math.pow(end[1] - start[1], 2));
+        }, 0);
+        
+        // Find positions of junctions
+        let cumulative = 0;
+        let asciiPosition = 0;
+        
+        // Track building count before each junction
+        for (let i = 0; i < streetData.edges.length; i++) {
+            const edge = streetData.edges[i];
+            const [start, end] = edge.geometry;
+            const edgeLength = Math.sqrt(Math.pow(end[0] - start[0], 2) + Math.pow(end[1] - start[1], 2));
+            
+            // Check for junction at end of this edge (if not last edge)
+            if (i < streetData.edges.length - 1) {
+                cumulative += edgeLength;
+                const nextEdge = streetData.edges[i + 1];
+                
+                // Check if there's a junction here that connects to other streets
+                if (edge.junction_ids && nextEdge.junction_ids) {
+                    const shared = edge.junction_ids.filter((jId: number) => 
+                        nextEdge.junction_ids.includes(jId));
+                    
+                    if (shared.length > 0) {
+                        // This is where a junction should appear geometrically
+                        const geometricRatio = cumulative / totalLength;
+                        // Store this for the ASCII position where junction will appear
+                        // (We'll match this up with the ASCII string later)
+                        positions.set(shared[0], geometricRatio);
+                    }
+                }
+            } else {
+                cumulative += edgeLength;
+            }
+        }
+        
+        return positions;
+    }
+
+    async loadStreetBuildings(streetId: number, playerPosition: 'start' | 'end' = 'start') {
+        // Fetch the building positions for the street
+        const streetData = await this.getStreetView(streetId);
+        
+        // Use shared method to render street elements
+        this.renderStreetElements(streetData);
+        
+        // Store total street width
+        const totalStreetPixelWidth = streetData.total_pixel_width;
         
         // Position player at end if requested
         if (playerPosition === 'end' && this.player) {
-            const totalStreetPixelWidth = this.streetBuildings.reduce((sum, building) => sum + building.width, 0);
             // Position player near the end of the street
             this.player.x = Math.max(0, totalStreetPixelWidth - 100); // Position near end with margin
             
@@ -721,7 +746,6 @@ export class Game extends Scene
             const targetScrollX = Math.max(0, this.player.x - this.scale.width * 0.8); // Show player at 80% of screen width
             this.cameras.main.scrollX = targetScrollX;
             
-            console.log(`Positioned player at end: playerX=${this.player.x}, cameraScrollX=${this.cameras.main.scrollX}, streetWidth=${totalStreetPixelWidth}`);
         }
         
         // Bring player to front if it exists
@@ -735,16 +759,6 @@ export class Game extends Scene
         });
         
         // Recreate edge visualizers if we have street data
-        if (this.currentStreetData && this.currentStreetData.edges) {
-            // Clear and recreate edge visualizers
-            this.edgeVisualizers.forEach(viz => viz.destroy());
-            this.edgeVisualizers = [];
-            
-            const totalStreetPixelWidth = this.streetBuildings.reduce((sum, building) => sum + building.width, 0);
-            if (totalStreetPixelWidth > 0) {
-                this.createEdgeVisualizers(this.currentStreetData, totalStreetPixelWidth);
-            }
-        }
     }
 
     switchToStreet(targetStreetId: number, playerPosition: 'start' | 'end' = 'start') {
@@ -762,9 +776,6 @@ export class Game extends Scene
         this.streetBuildings.forEach(building => building.destroy());
         this.streetBuildings = [];
         
-        // Clear existing visualizers
-        this.edgeVisualizers.forEach(viz => viz.destroy());
-        this.edgeVisualizers = [];
         
         // Clear NPC sprites (they'll be recreated for the new street)
         this.npcSprites.forEach(sprite => sprite.destroy());
@@ -776,7 +787,6 @@ export class Game extends Scene
         // Request updated data for new street via EventBus
         EventBus.emit('requestStreetSwitch', { streetId: targetStreetId });
         
-        console.log(`Switched to street ${targetStreetId}`);
     }
 
     async switchToStreetAtJunction(targetStreetId: number, junctionId: number) {
@@ -787,8 +797,6 @@ export class Game extends Scene
         this.streetBuildings.forEach(building => building.destroy());
         this.streetBuildings = [];
         
-        this.edgeVisualizers.forEach(viz => viz.destroy());
-        this.edgeVisualizers = [];
         
         this.npcSprites.forEach(sprite => sprite.destroy());
         this.npcSprites.clear();
@@ -818,24 +826,18 @@ export class Game extends Scene
         // Request updated data for new street via EventBus
         EventBus.emit('requestStreetSwitch', { streetId: targetStreetId });
         
-        console.log(`Switched to street ${targetStreetId} at junction ${junctionId} (position ${junctionInfo.position.toFixed(2)}, isAtEnd: ${junctionInfo.isAtEnd})`);
-        console.log(`Player positioned at x=${playerX}, facing=${junctionInfo.position > 0.5 ? 'left' : 'right'}`);
     }
 
     async calculateJunctionPositionInStreet(streetId: number, junctionId: number): Promise<{position: number, isAtEnd: boolean}> {
         try {
-            console.log(`Calculating position for junction ${junctionId} in street ${streetId}`);
             // Get the street data with edges from the API
             const response = await fetch(`${this.apiBaseUrl}/street/${streetId}`);
             const streetData = await response.json();
-            console.log(`Retrieved street data:`, streetData);
             
             if (!streetData || !streetData.edges) {
-                console.log(`No street data or edges found for street ${streetId}`);
                 return {position: 0, isAtEnd: false};
             }
             
-            console.log(`Street ${streetId} has ${streetData.edges.length} edges`);
             
             let cumulativeDistance = 0;
             let totalStreetLength = 0;
@@ -855,7 +857,6 @@ export class Game extends Scene
                 // Check if junction is at the start of this edge
                 if (edge.junction_ids[0] === junctionId) {
                     const position = cumulativeDistance / totalStreetLength;
-                    console.log(`Junction ${junctionId} found at START of edge ${edge.id}, position: ${position.toFixed(3)}`);
                     return {position, isAtEnd: position > 0.5};
                 }
                 
@@ -867,7 +868,6 @@ export class Game extends Scene
                 // Check if junction is at the end of this edge
                 if (edge.junction_ids.length > 1 && edge.junction_ids[1] === junctionId) {
                     const position = cumulativeDistance / totalStreetLength;
-                    console.log(`Junction ${junctionId} found at END of edge ${edge.id}, position: ${position.toFixed(3)}`);
                     return {position, isAtEnd: position > 0.5};
                 }
             }

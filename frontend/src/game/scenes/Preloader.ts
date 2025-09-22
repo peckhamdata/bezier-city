@@ -41,6 +41,7 @@ export class Preloader extends Scene {
                     startFrame: 0,
                     endFrame: 13
                 });
+                assetsToLoad++;
             });
 
             this.load.spritesheet('npc-01', 'assets/npcs/01_npc.png', {
@@ -51,16 +52,47 @@ export class Preloader extends Scene {
                 margin: 0,
                 spacing: 0
             });
+            assetsToLoad++;
     
             this.load.image('hm', 'assets/01_hm.png');
+            assetsToLoad++;
+
+            this.load.image('skyline', 'assets/01_skyline.png');
+            assetsToLoad++;
+
+            this.load.image('right-junction', 'assets/01_right_hand_junction.png');
+            assetsToLoad++;
 
 
             if (assetsToLoad > 0) {
+                let successCount = 0;
+                let failCount = 0;
+
                 this.load.on("progress", (value: number) => {
                     this.updateLoadingBar(value);
                 });
 
+                // Add error handling for failed asset loads
+                this.load.on("loaderror", (fileObj: any) => {
+                    failCount++;
+                    console.error(`❌ Failed to load asset: ${fileObj.key}`, {
+                        type: fileObj.type,
+                        url: fileObj.url,
+                        src: fileObj.src
+                    });
+                });
+
+                this.load.on("filecomplete", (key: string, type: string, data: any) => {
+                    successCount++;
+                    // Uncomment for verbose logging during debugging
+                    // console.log(`✅ Successfully loaded: ${key} (${type})`);
+                });
+
                 this.load.once("complete", () => {
+                    console.log(`📦 Asset loading complete: ${successCount} succeeded, ${failCount} failed out of ${assetsToLoad} total`);
+                    if (failCount > 0) {
+                        console.warn(`⚠️ ${failCount} assets failed to load. Check the console for details.`);
+                    }
                     this.scene.start("Game"); // ✅ Transition to `Game` when assets are loaded
                 });
 
